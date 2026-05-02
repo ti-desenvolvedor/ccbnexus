@@ -1,0 +1,55 @@
+---
+description: Seeders obrigatórios e RBAC (roles/permissions) + tipos de evento/avisos
+globs: "database/**/*.{php,stub}"
+alwaysApply: false
+---
+
+# Seeders e RBAC (Obrigatório)
+
+## Seeders obrigatórios
+
+- Usuário inicial:
+  - Nome: Thomas Gonçalves
+  - Email: thomasgoncalves@yahoo.com.br
+  - Perfil: Administrador
+
+- Roles:
+  - Administrador
+  - Secretaria
+  - Aprovador
+  - Administração
+  - Visualizador
+
+- Permissions:
+  - criar_evento
+  - editar_evento
+  - aprovar_evento
+  - cancelar_evento
+  - visualizar_evento
+  - gerenciar_usuarios
+  - aprovar_acesso
+  - gerenciar_avisos
+  - visualizar_relatorios
+
+- Event Types:
+  - Batismo
+  - Santa Ceia
+  - Reunião
+  - Ensaio Regional
+
+- Event Roles:
+  - Preside
+  - Atende
+  - Encarregado
+
+- Notification Rules:
+  - 30 dias
+  - 15 dias
+  - 7 dias
+  - 1 dia
+
+## Regras de avisos
+
+- Regras padrão editáveis em um painel de configuração.
+- Em cada evento: permitir “seguir regra padrão” ou “customizar regra do evento”.
+

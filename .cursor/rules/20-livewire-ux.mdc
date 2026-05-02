@@ -1,0 +1,21 @@
+---
+description: Livewire + Tailwind — padrões de UI/UX e componentes
+globs: "{app/Livewire,app/Modules/**/Livewire,resources/views}/**/*"
+alwaysApply: false
+---
+
+# Livewire + Tailwind (UI/UX)
+
+## UX consistente
+
+- Fluxos com estado claro: “rascunho” vs “submetido” vs “aprovado/cancelado”.
+- Forms: grupos por contexto (Dados do evento, Público, Papéis, Estrutura, Avisos).
+- Feedback imediato: validação inline, toasts/alerts, loading states.
+- Evitar telas densas: usar abas/accordions/steps quando necessário.
+
+## Padrões Livewire
+
+- Componentes pequenos e reutilizáveis; extrair subcomponentes para blocos repetidos.
+- Queries e regras de negócio não ficam no componente: chamar Service/UseCase.
+- Ações sensíveis (aprovar/cancelar/alterar): exigir justificativa e confirmar intenção.
+

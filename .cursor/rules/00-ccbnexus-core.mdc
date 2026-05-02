@@ -1,0 +1,32 @@
+---
+description: CCB Nexus — padrões, stack e fluxo de trabalho (sempre aplicar)
+alwaysApply: true
+---
+
+# CCB Nexus (Core)
+
+## Stack obrigatória
+
+- Laravel 10+
+- Livewire
+- TailwindCSS
+- MySQL
+- Redis (cache/filas)
+
+## Fluxo obrigatório de entrega (sempre nesta ordem)
+
+1. Orquestrador (quebra tarefas, define ordem, delega) — **não gera código**
+2. Arquiteto (estrutura, boundaries, models/services/relacionamentos)
+3. UX/UI (telas, usabilidade, agrupamento de campos)
+4. Backend (migrations/models/services/regras/validações) — **sem lógica em controllers**
+5. Frontend (Livewire components/views e integração)
+6. Reviewer (padrões, arquitetura, edge cases)
+7. DevOps (quando necessário: redis/queues/cache/performance)
+
+## Regras gerais
+
+- Nunca gerar tudo de uma vez; sempre quebrar em tarefas pequenas e revisáveis.
+- Aplicar SOLID, Clean Architecture, Service Layer; usar Repository quando necessário.
+- Preferir decisões escaláveis e modulares (múltiplos módulos).
+- Exigir justificativa e rastreabilidade nas mudanças que afetem agenda/eventos.
+

@@ -1,0 +1,30 @@
+---
+description: Arquitetura Laravel — Clean Architecture, services, repositórios
+globs: "{app,bootstrap,config,database,routes}/**/*.{php,stub}"
+alwaysApply: false
+---
+
+# Laravel Architecture (CCB Nexus)
+
+## Regras de design
+
+- Controllers só orquestram request/response; **sem regra de negócio**.
+- Regras de negócio vivem em Services (Service Layer) e/ou Use Cases.
+- Repositórios apenas quando houver ganho real (persistência complexa, troca de storage, queries reutilizadas).
+- Models focam em relacionamento e invariantes simples; evitar “fat models” com regra complexa.
+
+## Organização sugerida (modular e expansível)
+
+- `app/Modules/<Modulo>/`
+  - `Domain/` (entidades/VOs/invariantes)
+  - `Application/` (UseCases/DTOs)
+  - `Infrastructure/` (Eloquent repos, integrations, jobs)
+  - `Http/` (controllers, requests)
+  - `Livewire/` (componentes Livewire do módulo)
+
+## Padrões práticos
+
+- Validações: `FormRequest`/validadores no Livewire; regras complexas no Service/UseCase.
+- Transações: no Service/UseCase (limite claro).
+- Eventos/Listeners: para auditoria, notificações e integrações.
+
