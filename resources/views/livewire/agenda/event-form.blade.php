@@ -1,15 +1,21 @@
 <div class="space-y-6">
-    <div class="flex flex-wrap gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
-        <button type="button" wire:click="$set('tab', 'main')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'main', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'main'])>Dados</button>
-        <button type="button" wire:click="$set('tab', 'local')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'local', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'local'])>Local</button>
-        <button type="button" wire:click="$set('tab', 'audience')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'audience', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'audience'])>Público</button>
-        <button type="button" wire:click="$set('tab', 'recurrence')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'recurrence', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'recurrence'])>Recorrência</button>
-        <button type="button" wire:click="$set('tab', 'structure')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'structure', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'structure'])>Estrutura</button>
-        <button type="button" wire:click="$set('tab', 'people')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'people', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'people'])>Responsáveis</button>
-    </div>
-
     <x-ui.card>
         <form wire:submit="save" class="grid w-full max-w-full gap-4">
+            <div>
+                <label class="text-xs font-semibold text-slate-500">Título do evento</label>
+                <input type="text" wire:model="title" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
+                @error('title') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+            </div>
+
+            <div class="flex flex-wrap gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
+                <button type="button" wire:click="$set('tab', 'main')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'main', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'main'])>Dados</button>
+                <button type="button" wire:click="$set('tab', 'local')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'local', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'local'])>Local</button>
+                <button type="button" wire:click="$set('tab', 'audience')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'audience', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'audience'])>Público</button>
+                <button type="button" wire:click="$set('tab', 'recurrence')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'recurrence', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'recurrence'])>Recorrência</button>
+                <button type="button" wire:click="$set('tab', 'structure')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'structure', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'structure'])>Estrutura</button>
+                <button type="button" wire:click="$set('tab', 'people')" @class(['rounded-lg px-3 py-1.5 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === 'people', 'text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-900' => $tab !== 'people'])>Responsáveis</button>
+            </div>
+
             @if ($tab === 'main')
                 <div>
                     <label class="text-xs font-semibold text-slate-500">Regional</label>
@@ -19,11 +25,6 @@
                             <option value="{{ $r->id }}">{{ $r->name }}</option>
                         @endforeach
                     </select>
-                </div>
-                <div>
-                    <label class="text-xs font-semibold text-slate-500">Título</label>
-                    <input type="text" wire:model="title" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
-                    @error('title') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="text-xs font-semibold text-slate-500">Descrição</label>
