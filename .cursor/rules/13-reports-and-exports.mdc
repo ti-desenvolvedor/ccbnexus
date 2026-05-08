@@ -1,0 +1,23 @@
+---
+description: Relatórios/Exportações — streams, performance e permissões
+globs: "{app/Http/Controllers/*Export*.php,app/Services/*Export*.php,app/Services/EventExportService.php,app/Http/Controllers/EventReportExportController.php,routes/web.php}"
+alwaysApply: false
+---
+
+# Relatórios e exportações
+
+## Segurança
+
+- Rotas de exportação devem exigir permissão explícita (ex.: `visualizar_relatorios`) via middleware `can:`.
+- Export deve respeitar escopo (regional/contexto ativo) para não vazar dados.
+
+## Performance
+
+- Preferir `response()->streamDownload(...)` para CSV grandes.
+- Usar queries paginadas/chunk quando necessário.
+- Evitar N+1: sempre `with(...)` quando exportar relacionamentos.
+
+## Auditoria
+
+- Exportações sensíveis podem registrar activitylog (quando fizer sentido).
+

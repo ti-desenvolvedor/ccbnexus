@@ -19,3 +19,9 @@ alwaysApply: false
 - Queries e regras de negócio não ficam no componente: chamar Service/UseCase.
 - Ações sensíveis (aprovar/cancelar/alterar): exigir justificativa e confirmar intenção.
 
+## Avisos/Notificações (WhatsApp)
+
+- Gerar texto via Service (renderer), permitir editar antes de copiar/enviar.
+- Fornecer botões explícitos: **Copiar**, **Abrir no WhatsApp**, **Marcar como enviado**.
+- Se o evento estiver com WhatsApp desativado, a UI deve deixar claro que **não há aviso** e ocultar/neutralizar ações.
+

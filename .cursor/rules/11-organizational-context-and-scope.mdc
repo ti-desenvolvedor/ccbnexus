@@ -1,0 +1,24 @@
+---
+description: Contexto organizacional (Regional/Admin/Casa) — sessão, middleware, escopo e UI seletora
+globs: "{app/Http/Middleware/*OrganizationalContext*.php,app/Services/OrganizationalContextService.php,app/Livewire/Context/**,app/Models/{Regional,Administration,PrayerHouse,User}.php,docs/CCB_NEXUS_SCOPE.md,routes/web.php,resources/views/layouts/**}"
+alwaysApply: false
+---
+
+# Contexto organizacional (escopo)
+
+## Objetivo
+
+- O sistema é multi-escopo: **Regional → Administração → Casa de oração**.
+- O usuário pode ter acesso a múltiplos escopos e precisa de **contexto ativo** na sessão.
+
+## Regras obrigatórias
+
+- Middleware deve **hidratar** contexto padrão (quando sessão vazia) e **validar** que o usuário pode usar o contexto selecionado.
+- Toda query/listagem sensível deve considerar `activeRegionalId()` (e futuramente admin/casa quando o módulo exigir).
+- Ao trocar contexto na UI, sempre validar via `OrganizationalContextService::userMayUseContext(...)`.
+
+## UX
+
+- Se o usuário tiver mais de um escopo, a UI deve incentivar/obrigar seleção antes de ações sensíveis.
+- Exibir contexto ativo em área visível (ex.: topbar) quando possível.
+

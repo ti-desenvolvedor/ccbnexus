@@ -26,6 +26,9 @@ class Event extends Model
         'location_id',
         'meeting_room_id',
         'attendance_mode',
+        'dress_code',
+        'whatsapp_enabled',
+        'whatsapp_notice_template_id',
         'expected_attendees',
         'needs_sound_controller',
         'needs_av',
@@ -60,6 +63,7 @@ class Event extends Model
         'recurrence_until' => 'date',
         'cancelled_at' => 'datetime',
         'meta' => 'array',
+        'whatsapp_enabled' => 'boolean',
         'needs_sound_controller' => 'boolean',
         'needs_av' => 'boolean',
         'needs_parking' => 'boolean',
@@ -94,6 +98,11 @@ class Event extends Model
     public function meetingRoom(): BelongsTo
     {
         return $this->belongsTo(MeetingRoom::class);
+    }
+
+    public function whatsappNoticeTemplate(): BelongsTo
+    {
+        return $this->belongsTo(WhatsAppNoticeTemplate::class, 'whatsapp_notice_template_id');
     }
 
     public function creator(): BelongsTo

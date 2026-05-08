@@ -1,0 +1,23 @@
+---
+description: Aprovações e Acesso — padrões de políticas, auditoria e UX de decisão
+globs: "{app/Models/Approval.php,app/Policies/ApprovalPolicy.php,app/Livewire/**/Approvals*,resources/views/pages/agenda/approvals*,resources/views/livewire/agenda/approvals*,app/Models/AccessRequest.php,app/Policies/AccessRequestPolicy.php,app/Livewire/Access/**,resources/views/pages/access/**}"
+alwaysApply: false
+---
+
+# Aprovações + Acesso
+
+## Regras de decisão
+
+- Aprovar/rejeitar/cancelar deve exigir **Policy** + (quando aplicável) justificativa.
+- Guardar quem decidiu (`decided_by_user_id`) e quando (`decided_at`).
+
+## UX
+
+- Filas de aprovação: destacar pendências, histórico e motivo da decisão.
+- Ações destrutivas/sensíveis devem pedir confirmação.
+
+## Segurança
+
+- Evitar vazamento de solicitações entre regionais/escopos.
+- Preferir `can:` nas rotas e `authorize()` nos componentes.
+

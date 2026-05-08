@@ -1,0 +1,27 @@
+---
+description: Policies/Gates — RBAC com Spatie + escopo organizacional (evitar vazamento entre regionais)
+globs: "{app/Policies/**/*.php,app/Providers/AuthServiceProvider.php,database/seeders/**/*Permissions*.php,database/seeders/RolesAndPermissionsSeeder.php,routes/web.php}"
+alwaysApply: false
+---
+
+# Policies e Permissões (CCB Nexus)
+
+## Regras gerais
+
+- Toda operação sensível deve ter **Policy** ou **Gate** explícito.
+- Sempre considerar **permissão + escopo** (Regional/Administração/Casa) para evitar vazamento de dados.
+
+## Padrão para Agenda/Eventos
+
+- `EventPolicy::view` deve limitar leitura por regional acessível.
+- “Ações” (update/cancel/approve) exigem permissões específicas (`editar_evento`, `cancelar_evento`, `aprovar_evento`) + `view`.
+
+## Padrão para Avisos/WhatsApp
+
+- `gerenciar_avisos`: CRUD de templates e operação de avisos.
+- `moderar_conteudo`: ações que alteram “padrões oficiais” (ex.: template `is_default`).
+
+## Rotas
+
+- Rotas devem usar middleware `can:` quando fizer sentido (principalmente áreas administrativas).
+

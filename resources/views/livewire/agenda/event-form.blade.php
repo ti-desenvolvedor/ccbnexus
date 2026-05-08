@@ -68,6 +68,38 @@
                     </select>
                     @error('attendance_mode') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500">Traje</label>
+                        <select wire:model="dress_code" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950">
+                            <option value="">—</option>
+                            <option value="social">Social</option>
+                            <option value="esporte_fino">Esporte fino</option>
+                        </select>
+                        @error('dress_code') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500">Notificação WhatsApp</label>
+                        <label class="mt-2 inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                            <input type="checkbox" wire:model.live="whatsapp_enabled" class="rounded" />
+                            <span>Ativar para este evento</span>
+                        </label>
+                        @error('whatsapp_enabled') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+                <div class="@if (! $whatsapp_enabled) opacity-60 pointer-events-none @endif">
+                    <label class="text-xs font-semibold text-slate-500">Template WhatsApp</label>
+                    <select wire:model="whatsapp_notice_template_id" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950">
+                        <option value="">—</option>
+                        @foreach (\App\Models\WhatsAppNoticeTemplate::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get() as $tpl)
+                            <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('whatsapp_notice_template_id') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                    @if (! $whatsapp_enabled)
+                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Desative e o evento não terá aviso por padrão nem aparecerá na Central WhatsApp.</p>
+                    @endif
+                </div>
                 @if ($attendance_mode !== 'online_only')
                     <p class="text-xs text-slate-500 dark:text-slate-400">Local e sala definem-se na aba «Local».</p>
                 @else

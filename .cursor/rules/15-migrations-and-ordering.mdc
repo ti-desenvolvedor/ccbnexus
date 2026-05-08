@@ -1,0 +1,26 @@
+---
+description: Migrations — ordem, FKs e compatibilidade (evitar quebrar migrate em ambientes novos)
+globs: "database/migrations/**/*.php"
+alwaysApply: false
+---
+
+# Migrations (ordem e segurança)
+
+## Ordem e dependências
+
+- Evitar criar FK para uma tabela que ainda não existe na linha do tempo das migrations.
+- Se necessário, separar em **duas migrations**:
+  - (A) adicionar coluna
+  - (B) adicionar FK/constraint
+
+## Padrões de schema
+
+- Colunas boolean: `default(false)` (quando fizer sentido).
+- FKs: preferir `nullOnDelete()` quando o vínculo for opcional e não quiser cascata.
+- Índices: sempre que usar coluna para filtro/lista (ex.: `regional_id`, `status`, flags).
+
+## Down() completo
+
+- `down()` deve desfazer **FKs antes** de remover colunas.
+- Remover índices explicitamente quando criados manualmente.
+

@@ -1,0 +1,14 @@
+---
+description: Testes e qualidade — padrão mínimo para mudanças em agenda/infra/regras
+globs: "{tests/**/*.php,app/**/*.php}"
+alwaysApply: false
+---
+
+# Testes e qualidade
+
+## Regras
+
+- Mudanças em recorrência, conflitos de reserva e regras de negócio devem ter teste unitário/feature quando viável.
+- Evitar regressão: preferir testes pequenos e determinísticos (sem depender de horário local não-controlado).
+- Sempre rodar `php artisan test` após mudanças significativas.
+

@@ -1,0 +1,39 @@
+---
+description: Agenda — padrões para Avisos/Notificações WhatsApp (templates, moderação, envio manual)
+globs: "{app/Livewire/Agenda/**,app/Models/**,app/Policies/**,app/Services/**,database/migrations/**,database/seeders/**,resources/views/pages/agenda/**,resources/views/livewire/agenda/**,routes/web.php}"
+alwaysApply: false
+---
+
+# Agenda — Notificações WhatsApp (Plano 1)
+
+## Regras de produto (obrigatórias)
+
+- **Opt-in por evento**: se `events.whatsapp_enabled = false`, o evento **não** participa de avisos WhatsApp.
+- **Template por evento**: com WhatsApp ativo, o evento deve ter um template (`events.whatsapp_notice_template_id`).
+- **Envio manual**: o sistema gera texto, o usuário **copia** e/ou abre `wa.me`; o “enviado” é **marcado manualmente** (auditoria/histórico).
+
+## Moderação de templates
+
+- Templates podem ser criados/editados por quem tem `gerenciar_avisos`.
+- O template marcado como **padrão** (`is_default`) só pode ser alterado por quem tem `moderar_conteudo` (ou superadmin).
+
+## Arquitetura (sem regra em controller)
+
+- Renderização do texto: `WhatsAppNoticeRenderer` (placeholders + formatação).
+- Persistência/histórico: `WhatsAppNoticeService` (draft, update, markSent).
+- UI Livewire chama **Services**, não implementa regra de negócio.
+
+## Placeholders suportados (mínimo)
+
+- `{event_title}`, `{event_type}`
+- `{weekday}`, `{date}`, `{time}`
+- `{location}`, `{location_hybrid}`
+- `{dress_code}`
+- `{audience_text}`, `{notes}`, `{link}`, `{signature}`
+
+## Checklist rápido ao mexer no módulo
+
+- Validar escopo: templates e avisos respeitam `regional_id` (quando aplicável).
+- Garantir `wa.me/?text=` com URL encoding.
+- Evitar queries pesadas diretamente na Blade; preferir carregar no Livewire.
+

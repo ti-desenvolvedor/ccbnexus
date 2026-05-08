@@ -211,6 +211,9 @@
                                         @can('visualizar_relatorios')
                                             <a href="{{ route('reports.events.csv') }}" @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="block rounded-lg px-3 py-2 text-sm" :class="$store.nexus.sidebarSkin === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-100'" style="color: rgb(var(--sidebar-muted) / 1);">Exportar eventos (CSV)</a>
                                         @endcan
+                                        @can('gerenciar_avisos')
+                                            <a href="{{ route('agenda.whatsapp.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="block rounded-lg px-3 py-2 text-sm" :class="$store.nexus.sidebarSkin === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-100'" style="color: rgb(var(--sidebar-muted) / 1);">Notificações WhatsApp</a>
+                                        @endcan
                                         <span class="block rounded-lg px-3 py-2 text-xs text-slate-500">Avisos: comando agendado <code class="text-[10px]">nexus:event-reminders</code></span>
                                     @endauth
                                 </div>

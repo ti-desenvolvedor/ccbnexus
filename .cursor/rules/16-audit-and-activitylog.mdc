@@ -1,0 +1,19 @@
+---
+description: Auditoria (Spatie Activitylog) — o que registrar e como manter rastreabilidade
+globs: "{app/Models/**/*.php,database/migrations/**/*activity*php,app/Services/**/*.php,app/Policies/**/*.php}"
+alwaysApply: false
+---
+
+# Auditoria e Activity Log
+
+## Quando usar
+
+- Alterações sensíveis: templates oficiais, aprovações/rejeições, cancelamentos, mudanças de escopo/contexto.
+- CRUD de catálogo (cargos/grupos) quando impacta segmentação e relatórios.
+
+## Padrões
+
+- Preferir `logOnlyDirty()` para reduzir ruído.
+- Evitar log de dados altamente sensíveis (tokens, senhas, etc.).
+- Registrar IDs e campos críticos (status, datas, escopo) para rastreabilidade.
+

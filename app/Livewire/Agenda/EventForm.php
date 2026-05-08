@@ -7,6 +7,7 @@ use App\Models\EventType;
 use App\Models\Location;
 use App\Models\MeetingRoom;
 use App\Models\Regional;
+use App\Models\WhatsAppNoticeTemplate;
 use App\Services\EventRecurrenceService;
 use App\Services\EventService;
 use App\Services\OrganizationalContextService;
@@ -65,6 +66,12 @@ class EventForm extends Component
     public array $recurrence_months_list = [];
 
     public string $attendance_mode = 'in_person';
+
+    public ?string $dress_code = null;
+
+    public bool $whatsapp_enabled = false;
+
+    public ?int $whatsapp_notice_template_id = null;
 
     public ?int $expected_attendees = null;
 
@@ -133,6 +140,9 @@ class EventForm extends Component
             }
             $this->public_position_ids = $event->publicPositions->pluck('id')->all();
             $this->attendance_mode = $event->attendance_mode ?? 'in_person';
+            $this->dress_code = $event->dress_code;
+            $this->whatsapp_enabled = (bool) $event->whatsapp_enabled;
+            $this->whatsapp_notice_template_id = $event->whatsapp_notice_template_id;
             $this->expected_attendees = $event->expected_attendees;
             $this->needs_sound_controller = (bool) $event->needs_sound_controller;
             $this->needs_av = (bool) $event->needs_av;
@@ -151,6 +161,9 @@ class EventForm extends Component
             $this->regional_id = $context->activeRegionalId() ?? auth()->user()?->regional_id;
             $this->starts_at = now()->addDay()->setHour(9)->format('Y-m-d\TH:i');
             $this->ends_at = now()->addDay()->setHour(11)->format('Y-m-d\TH:i');
+            $this->dress_code = null;
+            $this->whatsapp_enabled = false;
+            $this->whatsapp_notice_template_id = null;
         }
     }
 
@@ -270,6 +283,14 @@ class EventForm extends Component
             ],
             'recurrence_months_list.*' => ['integer', 'min:1', 'max:12'],
             'attendance_mode' => ['required', 'in:in_person,online_only,hybrid'],
+            'dress_code' => ['nullable', 'in:social,esporte_fino'],
+            'whatsapp_enabled' => ['boolean'],
+            'whatsapp_notice_template_id' => [
+                'nullable',
+                'integer',
+                Rule::requiredIf(fn () => (bool) $this->whatsapp_enabled),
+                'exists:whatsapp_notice_templates,id',
+            ],
             'expected_attendees' => ['nullable', 'integer', 'min:0', 'max:500000'],
             'needs_sound_controller' => ['boolean'],
             'needs_av' => ['boolean'],
@@ -286,6 +307,20 @@ class EventForm extends Component
             'public_position_ids' => ['array'],
             'public_position_ids.*' => ['integer', Rule::in($allowed)],
         ]);
+
+        if (! ($data['whatsapp_enabled'] ?? false)) {
+            $data['whatsapp_notice_template_id'] = null;
+        } else {
+            // Escopo simples: template deve ser global (regional_id null) ou da regional do evento.
+            $tpl = ($data['whatsapp_notice_template_id'] ?? null)
+                ? WhatsAppNoticeTemplate::query()->find($data['whatsapp_notice_template_id'])
+                : null;
+            if ($tpl && $tpl->regional_id !== null && ($data['regional_id'] ?? null) !== null && (int) $tpl->regional_id !== (int) $data['regional_id']) {
+                $this->addError('whatsapp_notice_template_id', __('Este template não pertence à regional do evento.'));
+
+                return;
+            }
+        }
 
         if (! $data['needs_meals']) {
             $data['meal_coffee'] = false;

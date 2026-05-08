@@ -1,0 +1,25 @@
+---
+description: Catálogo Público — grupos/subgrupos/departamentos/cargos (PublicPosition) e escopo por regional
+globs: "{app/Models/Public*.php,app/Services/PublicAudienceCatalogService.php,app/Livewire/Agenda/Public*,resources/views/pages/agenda/public-*,resources/views/livewire/agenda/public-*,database/migrations/**,database/seeders/**}"
+alwaysApply: false
+---
+
+# Catálogo público (cargos e taxonomia)
+
+## Separação conceitual (obrigatória)
+
+- **RBAC** (Spatie roles/permissions) = operar o sistema.
+- **Catálogo público** (PublicGroup/Subgroup/Department/Position) = classificar evento/público-alvo/avisos.
+- Não duplicar: cargos do catálogo **não** viram permissões.
+
+## Escopo e integridade
+
+- Catálogo deve respeitar **regional** (e futuro admin/casa, se expandir).
+- UI do evento deve listar **somente cargos permitidos** para a regional ativa.
+- Ao salvar pivôs do evento, validar IDs contra `allowedPositionIdsForRegional(...)`.
+
+## UX do catálogo
+
+- Manter ordenação por `sort_order` e `is_active`.
+- Alterações no catálogo devem ter auditoria (activitylog) quando fizer sentido.
+

@@ -1,0 +1,24 @@
+---
+description: Infraestrutura — locais, salas, reservas, conflitos de agenda e escopo
+globs: "{app/Livewire/Infrastructure/**,app/Models/{Location,MeetingRoom,RoomReservation,Parking,RoomAssignment}.php,app/Services/{OrganizationalLocationService,RoomReservationService,RoomAssignmentService}.php,app/Policies/{LocationPolicy,MeetingRoomPolicy,RoomReservationPolicy,ParkingPolicy}.php,resources/views/pages/infrastructure/**,resources/views/livewire/infrastructure/**,database/migrations/**/*room*php}"
+alwaysApply: false
+---
+
+# Infraestrutura (Locais / Salas / Reservas)
+
+## Escopo (obrigatório)
+
+- Locais, salas e reservas devem respeitar a árvore organizacional (regional/admin/casa).
+- Usar `OrganizationalLocationService` para garantir que **endereços/locais** exibidos pertencem ao escopo correto.
+
+## Reservas (conflitos)
+
+- Sempre verificar conflito de horário na mesma sala antes de aprovar/publicar (`RoomReservationService::hasConflict(...)`).
+- Considerar status que não entram no conflito (ex.: `cancelled`, `rejected`, `draft`).
+- Mudanças de status sensíveis devem passar por **Policy** + auditoria.
+
+## UX
+
+- Mostrar feedback claro quando houver conflito (quem/onde/quando).
+- Bloquear campos que não se aplicam ao modo (ex.: se algo for “somente online”, local/sala não devem ser exigidos).
+

@@ -52,6 +52,8 @@ Route::middleware(['auth', 'verified', 'nexus.context'])->prefix('agenda')->grou
     Route::view('/events/create', 'pages.agenda.events-editor', ['event' => null])->name('agenda.events.create');
     Route::get('/events/{event}/edit', fn (Event $event) => view('pages.agenda.events-editor', compact('event')))->name('agenda.events.edit');
     Route::get('/events/{event}/confirmacao', fn (Event $event) => view('pages.agenda.event-rsvp', compact('event')))->name('agenda.events.rsvp');
+    Route::view('/whatsapp', 'pages.agenda.whatsapp-notifications-index')->name('agenda.whatsapp.index');
+    Route::view('/whatsapp/templates', 'pages.agenda.whatsapp-templates-index')->name('agenda.whatsapp-templates.index');
 
     Route::view('/approvals', 'pages.agenda.approvals-index')->name('agenda.approvals.index');
 

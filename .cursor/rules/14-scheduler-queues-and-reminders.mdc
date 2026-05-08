@@ -1,0 +1,19 @@
+---
+description: Scheduler/Filas — comandos agendados, lembretes e canais (log/dev vs produção)
+globs: "{app/Console/**,app/Console/Commands/**,app/Models/*Notification*,app/Models/EventNotificationDispatch.php,config/queue.php,config/cache.php,config/database.php}"
+alwaysApply: false
+---
+
+# Scheduler, filas e lembretes
+
+## Regras
+
+- Comandos agendados devem ser **idempotentes** (rodar 2x não duplica efeitos).
+- Registrar “dispatch” em tabela com chave única quando houver janelas/slots.
+- Em desenvolvimento, canal `log` é aceitável; em produção, preparar canal real (fila/job/integration).
+
+## Observabilidade
+
+- Logs devem incluir IDs de entidade (`event_id`, `template_id`, etc.) e contexto suficiente.
+- Evitar payloads gigantes em log; persistir em tabela quando necessário.
+

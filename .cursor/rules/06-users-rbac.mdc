@@ -1,0 +1,25 @@
+---
+description: Usuários + RBAC (Spatie) — padrões de criação, edição, escopo e segurança
+globs: "{app/Models/User.php,app/Policies/UserPolicy.php,app/Http/Middleware/**,app/Services/**,app/Livewire/**/User*,resources/views/pages/users/**,resources/views/livewire/**/user*,database/seeders/RolesAndPermissionsSeeder.php,routes/web.php,config/permission.php}"
+alwaysApply: false
+---
+
+# Usuários + RBAC (CCB Nexus)
+
+## Princípios (obrigatórios)
+
+- **Nunca** confiar só em UI: proteger com `Policy/Gate` + validação.
+- RBAC é **separado** do “Catálogo público/cargos” (taxonomia CCB). Não misturar conceitos.
+- Toda listagem/edição de usuário deve respeitar **escopo** (Regional/Administração/Casa) quando aplicável.
+
+## Regras de implementação
+
+- Permissões (Spatie): usar nomes **estáveis** (snake_case) e manter no `RolesAndPermissionsSeeder`.
+- Roles não devem conceder “superpoder” global sem intenção; preferir permissões explícitas.
+- Actions sensíveis (trocar role/permissão, ativar/desativar, reset): exigir confirmação/justificativa quando fizer sentido.
+
+## Checklist de segurança
+
+- Rotas de usuários devem usar `can:` (ex.: `can:update,user`) ou Policy no componente.
+- Evitar vazamento: quando `regional_id` for null (“global”), definir regra clara (ex.: só superadmin).
+

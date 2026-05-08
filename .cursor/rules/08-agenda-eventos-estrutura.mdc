@@ -1,0 +1,28 @@
+---
+description: Agenda/Eventos — padrões de domínio (recorrência, público/cargos, aprovações e avisos)
+globs: "{app/Models/Event.php,app/Services/EventService.php,app/Services/EventRecurrenceService.php,app/Policies/EventPolicy.php,app/Livewire/Agenda/Event*,resources/views/pages/agenda/event*,resources/views/livewire/agenda/event*,database/migrations/**events**.php}"
+alwaysApply: false
+---
+
+# Agenda — Eventos (domínio)
+
+## Estados e fluxos
+
+- Manter estados claros: `draft`, `pending_approval`, `published`, `cancelled` (e quaisquer novos devem ser mapeados em UI/Policy).
+- Ações: `cancel`, `approve`, `reject` devem ser via **Service Layer** e auditáveis.
+
+## Recorrência
+
+- Evento “pai” (`is_occurrence=false`) gera ocorrências; não editar ocorrência isolada sem regra explícita.
+- Limitar volume de geração (ex.: 52 semanal/mensal, 100 anual) e apresentar preview na UI.
+
+## Público-alvo (cargos)
+
+- Seleção no formulário deve respeitar catálogo por regional.
+- Persistência via pivot deve validar escopo (sem IDs de outra regional).
+
+## Avisos
+
+- Avisos de evento não podem vazar entre regionais.
+- Se um aviso for “padrão oficial”, exigir **moderação** e rastreabilidade.
+
