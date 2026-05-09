@@ -6,7 +6,7 @@
     :root {
         color-scheme: light;
 
-        /* Primary palette (default: blue) */
+        /* Palette (default: blue) */
         --color-primary-50: 239 246 255;
         --color-primary-100: 219 234 254;
         --color-primary-200: 191 219 254;
@@ -17,6 +17,17 @@
         --color-primary-700: 29 78 216;
         --color-primary-800: 30 64 175;
         --color-primary-900: 30 58 138;
+
+        /* Chrome tokens (default: blue palette, light) */
+        --sidebar-bg: 255 255 255;
+        --sidebar-border: 229 231 235;
+        --sidebar-text: 15 23 42;
+        --sidebar-muted: 100 116 139;
+
+        --topbar-bg: 255 255 255;
+        --topbar-border: 226 232 240;
+        --topbar-text: 15 23 42;
+        --topbar-muted: 100 116 139;
     }
 
     .dark {
@@ -32,27 +43,19 @@
         --color-primary-700: 29 78 216;
         --color-primary-800: 30 64 175;
         --color-primary-900: 30 58 138;
-    }
 
-    /*
-     | Sidebar skin is independent from light/dark app chrome.
-     | Controlled via `html[data-sidebar-skin="light|dark"]` (Alpine store).
-     */
-    html[data-sidebar-skin='light'] {
-        --sidebar-bg: 255 255 255;
-        --sidebar-border: 229 231 235;
-        --sidebar-text: 15 23 42;
-        --sidebar-muted: 100 116 139;
-    }
-
-    html[data-sidebar-skin='dark'] {
         --sidebar-bg: 17 24 39;
         --sidebar-border: 30 41 59;
         --sidebar-text: 226 232 240;
         --sidebar-muted: 148 163 184;
+
+        --topbar-bg: 2 6 23;
+        --topbar-border: 30 41 59;
+        --topbar-text: 226 232 240;
+        --topbar-muted: 148 163 184;
     }
 
-    html[data-primary='green'] {
+    html[data-palette='green'] {
         --color-primary-50: 240 253 244;
         --color-primary-100: 220 252 231;
         --color-primary-200: 187 247 208;
@@ -65,17 +68,158 @@
         --color-primary-900: 20 83 45;
     }
 
-    html[data-primary='purple'] {
-        --color-primary-50: 250 245 255;
-        --color-primary-100: 243 232 255;
-        --color-primary-200: 233 213 255;
-        --color-primary-300: 216 180 254;
-        --color-primary-400: 192 132 252;
-        --color-primary-500: 168 85 247;
-        --color-primary-600: 147 51 234;
-        --color-primary-700: 126 34 206;
-        --color-primary-800: 107 33 168;
-        --color-primary-900: 88 28 135;
+    html[data-palette='green_dark'] {
+        --color-primary-50: 236 253 245;
+        --color-primary-100: 209 250 229;
+        --color-primary-200: 167 243 208;
+        --color-primary-300: 110 231 183;
+        --color-primary-400: 52 211 153;
+        --color-primary-500: 16 185 129;
+        --color-primary-600: 5 150 105;
+        --color-primary-700: 4 120 87;
+        --color-primary-800: 6 95 70;
+        --color-primary-900: 6 78 59;
+    }
+
+    html[data-palette='red'] {
+        --color-primary-50: 254 242 242;
+        --color-primary-100: 254 226 226;
+        --color-primary-200: 254 202 202;
+        --color-primary-300: 252 165 165;
+        --color-primary-400: 248 113 113;
+        --color-primary-500: 239 68 68;
+        --color-primary-600: 220 38 38;
+        --color-primary-700: 185 28 28;
+        --color-primary-800: 153 27 27;
+        --color-primary-900: 127 29 29;
+    }
+
+    html[data-palette='red_dark'] {
+        --color-primary-50: 255 241 242;
+        --color-primary-100: 255 228 230;
+        --color-primary-200: 254 205 211;
+        --color-primary-300: 253 164 175;
+        --color-primary-400: 251 113 133;
+        --color-primary-500: 244 63 94;
+        --color-primary-600: 225 29 72;
+        --color-primary-700: 190 18 60;
+        --color-primary-800: 159 18 57;
+        --color-primary-900: 136 19 55;
+    }
+
+    html[data-palette='navy'] {
+        --color-primary-50: 239 246 255;
+        --color-primary-100: 219 234 254;
+        --color-primary-200: 191 219 254;
+        --color-primary-300: 147 197 253;
+        --color-primary-400: 96 165 250;
+        --color-primary-500: 59 130 246;
+        --color-primary-600: 37 99 235;
+        --color-primary-700: 30 64 175;
+        --color-primary-800: 30 58 138;
+        --color-primary-900: 23 37 84;
+    }
+
+    html[data-palette='orange'] {
+        --color-primary-50: 255 247 237;
+        --color-primary-100: 255 237 213;
+        --color-primary-200: 254 215 170;
+        --color-primary-300: 253 186 116;
+        --color-primary-400: 251 146 60;
+        --color-primary-500: 249 115 22;
+        --color-primary-600: 234 88 12;
+        --color-primary-700: 194 65 12;
+        --color-primary-800: 154 52 18;
+        --color-primary-900: 124 45 18;
+    }
+
+    html[data-palette='brown'] {
+        --color-primary-50: 248 250 252;
+        --color-primary-100: 241 245 249;
+        --color-primary-200: 226 232 240;
+        --color-primary-300: 203 213 225;
+        --color-primary-400: 148 163 184;
+        --color-primary-500: 100 116 139;
+        --color-primary-600: 71 85 105;
+        --color-primary-700: 51 65 85;
+        --color-primary-800: 30 41 59;
+        --color-primary-900: 15 23 42;
+    }
+
+    /*
+     | Palette skin for chrome (sidebar/topbar).
+     | Light mode uses higher contrast text; dark mode keeps chrome dark but tints borders subtly.
+     */
+    html[data-palette='green'] {
+        --sidebar-border: 220 252 231;
+        --topbar-border: 220 252 231;
+    }
+    html.dark[data-palette='green'] {
+        --sidebar-border: 21 128 61;
+        --topbar-border: 21 128 61;
+    }
+
+    html[data-palette='green_dark'] {
+        --sidebar-border: 167 243 208;
+        --topbar-border: 167 243 208;
+    }
+    html.dark[data-palette='green_dark'] {
+        --sidebar-border: 4 120 87;
+        --topbar-border: 4 120 87;
+    }
+
+    html[data-palette='red'] {
+        --sidebar-border: 254 202 202;
+        --topbar-border: 254 202 202;
+    }
+    html.dark[data-palette='red'] {
+        --sidebar-border: 185 28 28;
+        --topbar-border: 185 28 28;
+    }
+
+    html[data-palette='red_dark'] {
+        --sidebar-border: 254 205 211;
+        --topbar-border: 254 205 211;
+    }
+    html.dark[data-palette='red_dark'] {
+        --sidebar-border: 190 18 60;
+        --topbar-border: 190 18 60;
+    }
+
+    html[data-palette='blue'] {
+        --sidebar-border: 219 234 254;
+        --topbar-border: 219 234 254;
+    }
+    html.dark[data-palette='blue'] {
+        --sidebar-border: 29 78 216;
+        --topbar-border: 29 78 216;
+    }
+
+    html[data-palette='navy'] {
+        --sidebar-border: 191 219 254;
+        --topbar-border: 191 219 254;
+    }
+    html.dark[data-palette='navy'] {
+        --sidebar-border: 30 64 175;
+        --topbar-border: 30 64 175;
+    }
+
+    html[data-palette='orange'] {
+        --sidebar-border: 254 215 170;
+        --topbar-border: 254 215 170;
+    }
+    html.dark[data-palette='orange'] {
+        --sidebar-border: 194 65 12;
+        --topbar-border: 194 65 12;
+    }
+
+    html[data-palette='brown'] {
+        --sidebar-border: 226 232 240;
+        --topbar-border: 226 232 240;
+    }
+    html.dark[data-palette='brown'] {
+        --sidebar-border: 51 65 85;
+        --topbar-border: 51 65 85;
     }
 }
 

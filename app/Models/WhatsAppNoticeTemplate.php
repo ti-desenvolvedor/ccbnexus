@@ -14,6 +14,8 @@ class WhatsAppNoticeTemplate extends Model
     use HasFactory;
     use LogsActivity;
 
+    protected $table = 'whatsapp_notice_templates';
+
     protected $fillable = [
         'regional_id',
         'name',

@@ -1,14 +1,11 @@
 import './bootstrap';
 
-import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm.js';
-
-document.addEventListener('alpine:init', () => {
-    Alpine.store('nexus', {
+function createNexusStore() {
+    return {
         sidebarOpen: false,
-        sidebarCollapsed: false,
         theme: 'light', // light|dark
-        primary: 'blue', // blue|green|purple
-        sidebarSkin: 'dark', // light|dark (independent from global theme)
+        palette: 'blue', // blue|navy|green|green_dark|red|red_dark|orange|brown
+        path: '/',
         menu: {
             org: true,
             ops: false,
@@ -16,10 +13,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         boot(hints = null) {
-            this.sidebarCollapsed = localStorage.getItem('nexus.sidebarCollapsed') === '1';
+            this.path = String(window?.location?.pathname || '/');
             this.theme = localStorage.getItem('nexus.theme') || 'light';
-            this.primary = localStorage.getItem('nexus.primary') || 'blue';
-            this.sidebarSkin = localStorage.getItem('nexus.sidebarSkin') || 'dark';
+            this.palette = localStorage.getItem('nexus.palette') || 'blue';
 
             try {
                 const raw = localStorage.getItem('nexus.menu');
@@ -44,23 +40,44 @@ document.addEventListener('alpine:init', () => {
                 localStorage.setItem('nexus.menu', JSON.stringify(this.menu));
             }
 
-            const routeWantsFullNav =
-                hints &&
-                typeof hints === 'object' &&
-                (hints.org === true || hints.ops === true || hints.agenda === true);
-
-            if (
-                routeWantsFullNav &&
-                typeof window !== 'undefined' &&
-                window.matchMedia('(min-width: 1024px)').matches
-            ) {
-                this.sidebarCollapsed = false;
-                localStorage.setItem('nexus.sidebarCollapsed', '0');
-            }
+            this.syncMenuWithPath();
 
             this.applyTheme();
-            this.applyPrimary();
-            this.applySidebarSkin();
+            this.applyPalette();
+        },
+
+        setPath(pathname) {
+            this.path = String(pathname || '/');
+            this.syncMenuWithPath();
+        },
+
+        isActivePrefix(prefixes) {
+            const p = String(this.path || '/');
+            const list = Array.isArray(prefixes) ? prefixes : [prefixes];
+            return list.some((x) => {
+                const pref = String(x || '');
+                if (!pref) return false;
+                return p === pref || p.startsWith(pref + '/') || p.startsWith(pref);
+            });
+        },
+
+        isActiveExact(pathname) {
+            return String(this.path || '/') === String(pathname || '/');
+        },
+
+        syncMenuWithPath() {
+            const hints = nexusHintsFromPathname(this.path);
+
+            // If user is inside a section, ensure its group is open.
+            if (hints.org) {
+                this.menu.org = true;
+            }
+            if (hints.ops) {
+                this.menu.ops = true;
+            }
+            if (hints.agenda) {
+                this.menu.agenda = true;
+            }
         },
 
         toggleSidebar() {
@@ -71,28 +88,12 @@ document.addEventListener('alpine:init', () => {
             this.sidebarOpen = false;
         },
 
-        toggleCollapse() {
-            this.sidebarCollapsed = !this.sidebarCollapsed;
-            localStorage.setItem('nexus.sidebarCollapsed', this.sidebarCollapsed ? '1' : '0');
-        },
-
         ensureSidebarExpandedForNavigation() {
             if (typeof window === 'undefined') {
                 return;
             }
 
             this.closeSidebar();
-
-            if (!window.matchMedia('(min-width: 1024px)').matches) {
-                return;
-            }
-
-            if (!this.sidebarCollapsed) {
-                return;
-            }
-
-            this.sidebarCollapsed = false;
-            localStorage.setItem('nexus.sidebarCollapsed', '0');
         },
 
         toggleTheme() {
@@ -101,16 +102,20 @@ document.addEventListener('alpine:init', () => {
             this.applyTheme();
         },
 
-        setPrimary(primary) {
-            this.primary = primary;
-            localStorage.setItem('nexus.primary', this.primary);
-            this.applyPrimary();
-        },
-
-        setSidebarSkin(skin) {
-            this.sidebarSkin = skin === 'light' ? 'light' : 'dark';
-            localStorage.setItem('nexus.sidebarSkin', this.sidebarSkin);
-            this.applySidebarSkin();
+        setPalette(palette) {
+            const allowed = [
+                'blue',
+                'navy',
+                'green',
+                'green_dark',
+                'red',
+                'red_dark',
+                'orange',
+                'brown',
+            ];
+            this.palette = allowed.includes(palette) ? palette : 'blue';
+            localStorage.setItem('nexus.palette', this.palette);
+            this.applyPalette();
         },
 
         toggleMenu(key) {
@@ -120,7 +125,11 @@ document.addEventListener('alpine:init', () => {
 
             this.ensureSidebarExpandedForNavigation();
 
-            this.menu[key] = !this.menu[key];
+            const next = !this.menu[key];
+            this.menu.org = false;
+            this.menu.ops = false;
+            this.menu.agenda = false;
+            this.menu[key] = next;
             localStorage.setItem('nexus.menu', JSON.stringify(this.menu));
         },
 
@@ -128,14 +137,44 @@ document.addEventListener('alpine:init', () => {
             document.documentElement.classList.toggle('dark', this.theme === 'dark');
         },
 
-        applyPrimary() {
-            document.documentElement.dataset.primary = this.primary;
+        applyPalette() {
+            document.documentElement.dataset.palette = this.palette;
         },
+    };
+}
 
-        applySidebarSkin() {
-            document.documentElement.dataset.sidebarSkin = this.sidebarSkin;
-        },
-    });
+// Register store when Alpine initializes (Livewire v3 provides Alpine globally).
+document.addEventListener('alpine:init', () => {
+    const Alpine = window.Alpine;
+
+    if (Alpine && !Alpine.store('nexus')) {
+        Alpine.store('nexus', createNexusStore());
+    }
 });
 
-Livewire.start();
+function nexusHintsFromPathname(pathname) {
+    const p = String(pathname || '/');
+    return {
+        org: p.startsWith('/organization') || p.startsWith('/users') || p.startsWith('/access'),
+        ops: p.startsWith('/infrastructure'),
+        agenda: p.startsWith('/agenda') || p.startsWith('/reports'),
+    };
+}
+
+function nexusSyncAfterNavigation() {
+    try {
+        const Alpine = window.Alpine;
+        const store = Alpine?.store('nexus');
+        if (!store) return;
+
+        const pathname = window.location?.pathname;
+        store.setPath(pathname);
+    } catch {
+        // ignore
+    }
+}
+
+// Livewire v3 navigation doesn't always re-run Alpine x-init.
+// Ensure store state is synced to current pathname.
+document.addEventListener('livewire:navigated', nexusSyncAfterNavigation);
+window.addEventListener('livewire:navigated', nexusSyncAfterNavigation);

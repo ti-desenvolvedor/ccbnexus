@@ -13,6 +13,8 @@ class WhatsAppNotice extends Model
     use HasFactory;
     use LogsActivity;
 
+    protected $table = 'whatsapp_notices';
+
     public const STATUS_DRAFT = 'draft';
     public const STATUS_SENT_MANUAL = 'sent_manual';
 
