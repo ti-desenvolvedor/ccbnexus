@@ -102,6 +102,12 @@ function createNexusStore() {
             this.applyTheme();
         },
 
+        setTheme(theme) {
+            this.theme = theme === 'dark' ? 'dark' : 'light';
+            localStorage.setItem('nexus.theme', this.theme);
+            this.applyTheme();
+        },
+
         setPalette(palette) {
             const allowed = [
                 'blue',

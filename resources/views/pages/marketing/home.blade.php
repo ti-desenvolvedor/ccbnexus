@@ -3,11 +3,11 @@
         <div>
             <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
                 <span class="inline-flex h-2 w-2 rounded-full bg-primary-500"></span>
-                Plataforma modular • Laravel + Livewire
+                Plataforma modular • Livewire + Tailwind
             </div>
 
-            <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-5xl">
-                CCB Nexus
+            <h1 class="mt-4 text-3xl font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100 sm:text-5xl">
+                {{ config('app.name') }}
             </h1>
             <p class="mt-4 max-w-prose text-base leading-relaxed text-slate-600 dark:text-slate-300">
                 Agenda, Eventos, Secretaria, Avisos/Notificações, Aprovações, Relatórios e Usuários/Permissões — com escopo por Regional/Administração/Casa.

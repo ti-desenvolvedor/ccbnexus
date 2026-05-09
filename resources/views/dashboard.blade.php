@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <div class="text-xs font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">CCB Nexus</div>
+                <div class="text-xs font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">{{ config('app.name') }}</div>
                 <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Painel</h1>
                 <p class="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
                     Resumo da organização (regional, administração, casas de oração), agenda e infraestrutura no seu contexto ativo.
