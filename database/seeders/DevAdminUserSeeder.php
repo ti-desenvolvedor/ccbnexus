@@ -17,11 +17,18 @@ class DevAdminUserSeeder extends Seeder
     {
         $email = 'thomasgoncalves@yahoo.com.br';
 
-        $password = (string) env('INITIAL_ADMIN_PASSWORD', 'ChangeMe!123');
+        $password = (string) config('nexus.initial_admin_password', '');
+        if ($password === '') {
+            $this->command?->warn('INITIAL_ADMIN_PASSWORD vazio — admin nao criado/atualizado. Defina no .env.');
+
+            return;
+        }
 
         $regional = Regional::query()->where('slug', 'ccb-demo')->first();
 
         $user = User::query()->where('email', $email)->first();
+        $resetPassword = (bool) config('nexus.reset_admin_password', false);
+
         if ($user === null) {
             $user = User::query()->create([
                 'email' => $email,
@@ -32,13 +39,19 @@ class DevAdminUserSeeder extends Seeder
                 'regional_id' => $regional?->id,
             ]);
         } else {
-            // Não alterar a password em re-seeds: evita “credenciais inválidas” após mudança manual.
-            $user->update([
+            $payload = [
                 'name' => 'Thomas Gonçalves',
                 'email_verified_at' => $user->email_verified_at ?? now(),
                 'is_super_admin' => true,
                 'regional_id' => $regional?->id,
-            ]);
+            ];
+
+            // Só regrava password quando pedido explicitamente (evita sobrescrever mudança manual).
+            if ($resetPassword) {
+                $payload['password'] = Hash::make($password);
+            }
+
+            $user->update($payload);
         }
 
         $role = Role::query()->where('name', 'Administrador')->where('guard_name', 'web')->first();
