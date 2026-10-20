@@ -66,7 +66,24 @@
     @endif
 
     <div class="grid grid-cols-1">
-        <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        <div class="space-y-3 md:hidden">
+            @forelse ($servants as $servant)
+                <article wire:key="servant-card-{{ $servant->id }}" class="space-y-1 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+                    <div class="flex items-start justify-between gap-3">
+                        <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{{ $servant->full_name }}</h2>
+                        @if ($canRegisterServant)
+                            <button type="button" wire:click="edit({{ $servant->id }})" class="inline-flex min-h-11 shrink-0 items-center font-semibold text-primary-700 underline decoration-primary-700/40 underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-primary-300">Editar</button>
+                        @endif
+                    </div>
+                    <p class="text-sm text-slate-700 dark:text-slate-300">{{ $servant->ministry }} · {{ $servant->ordained_on?->format('d/m/Y') ?? 'Sem data de ordenação' }}</p>
+                    <p class="text-sm text-slate-700 dark:text-slate-300">Comum: {{ $servant->comum?->display_label ?? '—' }}</p>
+                    <p class="text-sm text-slate-700 dark:text-slate-300">Atendimento: {{ $servant->attendanceHouses->isEmpty() ? '—' : $servant->attendanceHouses->pluck('display_label')->join(', ') }}</p>
+                </article>
+            @empty
+                <p class="rounded-xl border border-slate-200 px-4 py-10 text-center text-sm text-slate-700 dark:border-slate-800 dark:text-slate-300">Nenhuma pessoa cadastrada nesta regional.</p>
+            @endforelse
+        </div>
+        <div class="hidden overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 md:block">
             <table class="w-max min-w-full border-separate border-spacing-0 text-sm">
                 <thead>
                     <tr class="bg-slate-100 text-left text-slate-800 dark:bg-slate-900 dark:text-slate-100">

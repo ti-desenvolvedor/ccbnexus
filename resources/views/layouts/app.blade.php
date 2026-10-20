@@ -389,7 +389,7 @@
             </aside>
 
             <!-- Main -->
-            <div class="min-h-screen transition-[padding] duration-200 lg:pl-72">
+            <div class="min-h-screen min-w-0 transition-[padding] duration-200 lg:pl-72">
                 <!-- Topbar -->
                 <header
                     class="sticky top-0 z-30 border-b backdrop-blur"
@@ -398,13 +398,22 @@
                     <div class="mx-auto flex h-16 w-full max-w-full items-center gap-3 px-4 sm:px-6 lg:px-8">
                         <button
                             type="button"
-                            class="inline-flex rounded-lg p-2 text-[rgb(var(--topbar-text)/1)] hover:bg-[rgb(var(--topbar-muted)/0.14)] lg:hidden"
+                            class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[rgb(var(--topbar-text)/1)] hover:bg-[rgb(var(--topbar-muted)/0.14)] lg:hidden"
                             @click="$store.nexus.toggleSidebar()"
                             aria-label="{{ __('Abrir menu') }}"
                         >
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path stroke-width="2" stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[rgb(var(--topbar-text)/1)] hover:bg-[rgb(var(--topbar-muted)/0.14)] md:hidden"
+                            aria-label="{{ __('Buscar páginas e ações') }}"
+                            onclick="window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))"
+                        >
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="2" stroke-linecap="round" d="M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14z" /></svg>
                         </button>
 
                         <div class="hidden min-w-0 flex-1 md:block">
@@ -422,7 +431,7 @@
                         </div>
 
                         <div class="ml-auto flex items-center gap-2">
-                            <div class="relative hidden sm:block" x-data="{ open: false }">
+                            <div class="relative" x-data="{ open: false }">
                                 <button
                                     type="button"
                                     class="inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold text-[rgb(var(--topbar-text)_/_1)] hover:bg-[rgb(var(--topbar-muted)_/_0.12)]"
@@ -436,7 +445,7 @@
                                         <path stroke-width="2" stroke-linecap="round" d="M12 3a6 6 0 100 12 6 6 0 000-12z" />
                                         <path stroke-width="2" stroke-linecap="round" d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2" />
                                     </svg>
-                                    <span class="max-w-[7rem] truncate sm:max-w-none">{{ __('Aparência') }}</span>
+                                    <span class="hidden max-w-[7rem] truncate sm:inline">{{ __('Aparência') }}</span>
                                     <svg class="h-3.5 w-3.5 shrink-0 opacity-70 transition" :class="{ 'rotate-180': open }" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                                         <path stroke-width="2" stroke-linecap="round" d="M6 9l6 6 6-6" />
                                     </svg>
@@ -553,10 +562,10 @@
                                     class="absolute right-0 mt-2 w-56 rounded-xl border py-1 text-sm shadow-lg"
                                     style="border-color: rgb(var(--topbar-border) / 0.90); background-color: rgb(var(--topbar-bg) / 1); color: rgb(var(--topbar-text) / 1);"
                                 >
-                                    <a href="{{ route('profile') }}" class="block px-3 py-2 hover:bg-[rgb(var(--topbar-muted)/0.10)]">{{ __('Perfil') }}</a>
+                                    <a href="{{ route('profile') }}" class="flex min-h-11 items-center px-3 hover:bg-[rgb(var(--topbar-muted)/0.10)]">{{ __('Perfil') }}</a>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
-                                        <button type="submit" class="block w-full px-3 py-2 text-left hover:bg-[rgb(var(--topbar-muted)/0.10)]">{{ __('Sair') }}</button>
+                                        <button type="submit" class="flex min-h-11 w-full items-center px-3 text-left hover:bg-[rgb(var(--topbar-muted)/0.10)]">{{ __('Sair') }}</button>
                                     </form>
                                 </div>
                             </div>
@@ -602,6 +611,8 @@
 
         <style>
             [x-cloak] { display: none !important; }
+            aside nav a,
+            aside nav button { min-height: 2.75rem; }
         </style>
         @stack('scripts')
     </body>

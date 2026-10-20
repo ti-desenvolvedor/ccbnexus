@@ -88,7 +88,38 @@
     </section>
 
     <div class="grid grid-cols-1">
-        <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        <div class="space-y-4 md:hidden">
+            @forelse ($groups as $group)
+                <section class="space-y-2">
+                    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-50">{{ $group['name'] }}</h2>
+                    @foreach ($group['rows'] as $row)
+                        <article wire:key="marking-card-{{ $row['event_id'] }}" class="space-y-2 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">{{ $row['when'] }}</p>
+                                    <p class="text-sm text-slate-700 dark:text-slate-300">{{ $row['type_name'] }} · {{ $row['place'] }}</p>
+                                </div>
+                                @if ($row['marked'])
+                                    <span class="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100">OK</span>
+                                @else
+                                    <span class="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-950 dark:bg-amber-950 dark:text-amber-100">Falta marcar</span>
+                                @endif
+                            </div>
+                            @if ($row['attendant'] !== '')
+                                <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $row['attendant'] }}@if (($row['ministry'] ?? '') !== '') <span class="font-normal text-slate-700 dark:text-slate-300">· {{ $row['ministry'] }}</span>@endif</p>
+                            @endif
+                            <div class="flex flex-col gap-2 sm:flex-row">
+                                <button type="button" wire:click="openAttendant({{ $row['event_id'] }})" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-primary-700 px-4 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">{{ $row['marked'] ? 'Trocar' : 'Cadastrar' }}</button>
+                                <a href="{{ route('agenda.events.edit', $row['edit_id']) }}" wire:navigate class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-600 dark:text-slate-100">Abrir</a>
+                            </div>
+                        </article>
+                    @endforeach
+                </section>
+            @empty
+                <p class="rounded-xl border border-slate-200 px-4 py-10 text-center text-sm text-slate-700 dark:border-slate-800 dark:text-slate-300">Nenhuma marcação neste período para os tipos selecionados.</p>
+            @endforelse
+        </div>
+        <div class="hidden overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 md:block">
             <table class="w-max min-w-full border-separate border-spacing-0 text-sm">
                 <thead>
                     <tr class="bg-slate-100 text-left text-slate-800 dark:bg-slate-900 dark:text-slate-100">
