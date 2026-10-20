@@ -119,7 +119,8 @@ O cadastro plano de “público” (`Audience` com nome/slug apenas) é **insufi
 | Feito | Menu Facilitador, contexto no chrome, Ctrl+K, empty states, calendário salas, setup/teardown, pedido com regional |
 | Feito | Policies com escopo (Parking/catálogo/WhatsApp/Approvals); middleware `can:`; throttle; status sem env em prod |
 | Feito | Docs `DEPRECATE_AUDIENCES.md` + `RBAC_SCOPED_DESIGN.md` |
-| Próximo | Implementar RBAC escopado após PO; remover CRUD audiences legado; módulo Avisos; pessoas N:N |
+| Feito | Revisão 2026-10: escrita da secretaria separada de `visualizar_relatorios`; registo sem regional invisível fora do super-admin; pedido de acesso não cruza regional |
+| Próximo | RBAC escopado (decisão de produto em `docs/RBAC_SCOPED_DESIGN.md`); retirar CRUD `audiences`; pessoas N:N |
 
 ### Impeccable (UI)
 

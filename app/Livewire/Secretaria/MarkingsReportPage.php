@@ -134,6 +134,7 @@ class MarkingsReportPage extends Component
 
     public function saveServant(OrganizationalContextService $context): void
     {
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         MinistryServant::register(
             $this->regionalForWrite($context),
             $this->servant_name,
@@ -146,6 +147,7 @@ class MarkingsReportPage extends Component
 
     public function saveAndAssign(OrganizationalContextService $context): void
     {
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $regionalId = $this->regionalForWrite($context);
         $event = $this->eventForMarking((int) $this->markingEventId);
         abort_unless((int) $event->regional_id === $regionalId, 403);
@@ -163,6 +165,7 @@ class MarkingsReportPage extends Component
 
     public function useExistingServant(): void
     {
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $this->validate([
             'existing_servant_id' => ['required', 'integer'],
         ], [
@@ -175,6 +178,7 @@ class MarkingsReportPage extends Component
 
     public function assignServant(int $eventId, string $servantId): void
     {
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         if ($servantId === '' || $servantId === 'keep') {
             return;
         }
@@ -247,7 +251,7 @@ class MarkingsReportPage extends Component
             'ministryOffices' => $regionalId ? $catalog->ministryOffices($regionalId) : collect(),
             'markingEvent' => $markingEvent,
             'missingCount' => $report['missing'],
-            'canRegisterServant' => (bool) $regionalId,
+            'canRegisterServant' => (bool) $regionalId && (bool) auth()->user()?->canMaintainSecretaria(),
             'exportQuery' => [
                 'date_from' => $from->toDateString(),
                 'date_to' => $to->toDateString(),

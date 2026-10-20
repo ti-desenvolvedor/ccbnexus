@@ -3,6 +3,7 @@
 namespace Tests\Feature\Security;
 
 use App\Livewire\Access\AccessRequestList;
+use App\Livewire\Secretaria\MarkingsReportPage;
 use App\Livewire\Secretaria\MinistryServantsPage;
 use App\Livewire\Secretaria\RegionalNoticeManager;
 use App\Models\AccessRequest;
@@ -41,6 +42,11 @@ class ScopeLeakReviewTest extends TestCase
         Livewire::test(MinistryServantsPage::class)
             ->set('servant_name', 'José')
             ->call('save')
+            ->assertForbidden();
+
+        Livewire::test(MarkingsReportPage::class)
+            ->set('servant_name', 'José')
+            ->call('saveServant')
             ->assertForbidden();
 
         $this->assertDatabaseCount('regional_notices', 0);

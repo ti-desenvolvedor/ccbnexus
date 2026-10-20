@@ -117,6 +117,9 @@
                                         @if ($row['attendant'] !== '')
                                             <span class="font-semibold text-slate-900 dark:text-slate-100">{{ $row['attendant'] }}</span>
                                         @endif
+                                        @if (($row['ministry'] ?? '') !== '')
+                                            <span class="text-slate-700 dark:text-slate-300">{{ $row['ministry'] }}</span>
+                                        @endif
                                         <button type="button" wire:click="openAttendant({{ $row['event_id'] }})" class="inline-flex min-h-11 items-center font-semibold text-primary-700 underline decoration-primary-700/40 underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-primary-300">
                                             {{ $row['marked'] ? 'Trocar' : 'Cadastrar' }}
                                         </button>
