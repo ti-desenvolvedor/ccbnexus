@@ -10,6 +10,16 @@ new #[Layout('layouts.guest')] class extends Component
 {
     public LoginForm $form;
 
+    public function mount(): void
+    {
+        $this->form->refreshCaptcha();
+    }
+
+    public function refreshCaptcha(): void
+    {
+        $this->form->refreshCaptcha();
+    }
+
     /**
      * Handle an incoming authentication request.
      */
@@ -48,6 +58,27 @@ new #[Layout('layouts.guest')] class extends Component
 
             <x-input-error :messages="$errors->get('form.password')" class="mt-2" />
         </div>
+
+        @if ($form->captchaRequired())
+            <div class="mt-4">
+                <x-input-label for="captcha" value="Código da imagem" />
+                <p class="mt-1 text-xs text-gray-500">Digite os caracteres da imagem. Depois de muitas tentativas o login fica bloqueado por 15 minutos.</p>
+                <div class="mt-2 flex items-center gap-3">
+                    <img
+                        src="{{ route('login.captcha') }}?v={{ $form->captchaStamp() }}"
+                        alt="Código de verificação"
+                        width="180"
+                        height="56"
+                        class="rounded-md border border-gray-200 bg-white"
+                    />
+                    <button type="button" wire:click="refreshCaptcha" class="text-sm text-gray-600 underline">
+                        Outro código
+                    </button>
+                </div>
+                <x-text-input wire:model="form.captcha" id="captcha" class="block mt-2 w-full" type="text" name="captcha" required autocomplete="off" inputmode="text" />
+                <x-input-error :messages="$errors->get('form.captcha')" class="mt-2" />
+            </div>
+        @endif
 
         <!-- Remember Me -->
         <div class="block mt-4">

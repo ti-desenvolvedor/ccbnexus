@@ -7,6 +7,7 @@ use App\Models\RoomReservation;
 use App\Services\RoomReservationService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use InvalidArgumentException;
 use Livewire\Component;
 
 class RoomReservationForm extends Component
@@ -23,16 +24,24 @@ class RoomReservationForm extends Component
 
     public string $ends_at = '';
 
+    /** Pedido explícito de fila de aprovação (ignorado se o user não pode auto-aprovar). */
     public bool $requires_approval = false;
+
+    public int $setup_minutes = 0;
+
+    public int $teardown_minutes = 0;
 
     public function mount(): void
     {
         $this->authorize('create', RoomReservation::class);
         $user = auth()->user();
-        $room = MeetingRoom::query()->visibleToUser($user)->orderBy('name')->first();
+        $prefRoom = (int) request()->query('meeting_room_id', 0);
+        $room = $prefRoom
+            ? MeetingRoom::query()->visibleToUser($user)->whereKey($prefRoom)->first()
+            : MeetingRoom::query()->visibleToUser($user)->orderBy('name')->first();
         $this->meeting_room_id = (int) ($room?->id ?? 0);
-        $this->starts_at = now()->addDay()->setHour(9)->setMinute(0)->format('Y-m-d\TH:i');
-        $this->ends_at = now()->addDay()->setHour(10)->setMinute(0)->format('Y-m-d\TH:i');
+        $this->starts_at = (string) (request()->query('starts_at') ?: now()->addDay()->setHour(9)->setMinute(0)->format('Y-m-d\TH:i'));
+        $this->ends_at = (string) (request()->query('ends_at') ?: now()->addDay()->setHour(10)->setMinute(0)->format('Y-m-d\TH:i'));
     }
 
     public function save(RoomReservationService $reservations): void
@@ -46,39 +55,26 @@ class RoomReservationForm extends Component
             'starts_at' => ['required', 'date'],
             'ends_at' => ['required', 'date', 'after:starts_at'],
             'requires_approval' => ['boolean'],
+            'setup_minutes' => ['integer', 'min:0', 'max:240'],
+            'teardown_minutes' => ['integer', 'min:0', 'max:240'],
         ]);
 
-        $room = MeetingRoom::query()->findOrFail($data['meeting_room_id']);
-        $user = auth()->user();
-        if (! $user->canAccessMeetingRoom($room)) {
-            $this->addError('meeting_room_id', __('Sem permissão para reservar esta sala.'));
+        try {
+            $reservations->create([
+                'meeting_room_id' => (int) $data['meeting_room_id'],
+                'title' => $data['title'],
+                'notes' => $data['notes'] ?? null,
+                'starts_at' => Carbon::parse($data['starts_at']),
+                'ends_at' => Carbon::parse($data['ends_at']),
+                'requires_approval' => (bool) $data['requires_approval'],
+                'setup_minutes' => (int) $data['setup_minutes'],
+                'teardown_minutes' => (int) $data['teardown_minutes'],
+            ], auth()->user());
+        } catch (InvalidArgumentException $e) {
+            $this->addError('starts_at', $e->getMessage());
 
             return;
         }
-
-        $starts = Carbon::parse($data['starts_at']);
-        $ends = Carbon::parse($data['ends_at']);
-
-        if ($reservations->hasConflict($room->id, $starts, $ends)) {
-            $this->addError('starts_at', __('Já existe reserva aprovada ou pendente neste intervalo.'));
-
-            return;
-        }
-
-        $status = $data['requires_approval'] ? 'pending' : 'approved';
-
-        RoomReservation::query()->create([
-            'meeting_room_id' => $room->id,
-            'title' => $data['title'],
-            'notes' => $data['notes'] ?? null,
-            'starts_at' => $starts,
-            'ends_at' => $ends,
-            'status' => $status,
-            'requires_approval' => $data['requires_approval'],
-            'requested_by_user_id' => $user->id,
-            'approved_by_user_id' => $status === 'approved' ? $user->id : null,
-            'approved_at' => $status === 'approved' ? now() : null,
-        ]);
 
         session()->flash('status', __('Reserva registada.'));
 

@@ -2,20 +2,21 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\DestroysPublicCatalogFormRecords;
 use App\Models\Audience;
+use App\Services\SlugService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class AudienceForm extends Component
 {
     use AuthorizesRequests;
+    use DestroysPublicCatalogFormRecords;
 
     public ?Audience $audience = null;
 
     public string $name = '';
-
-    public string $slug = '';
 
     public bool $is_active = true;
 
@@ -26,7 +27,6 @@ class AudienceForm extends Component
         if ($this->audience) {
             $this->authorize('update', $this->audience);
             $this->name = $this->audience->name;
-            $this->slug = $this->audience->slug;
             $this->is_active = $this->audience->is_active;
             $this->sort_order = (int) $this->audience->sort_order;
         } else {
@@ -34,22 +34,26 @@ class AudienceForm extends Component
         }
     }
 
-    public function save(): void
+    public function save(SlugService $slugs): void
     {
         if ($this->audience) {
             $this->authorize('update', $this->audience);
-            $slugRule = Rule::unique('audiences', 'slug')->ignore($this->audience->id);
         } else {
             $this->authorize('create', Audience::class);
-            $slugRule = Rule::unique('audiences', 'slug');
         }
 
         $data = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slugRule],
             'is_active' => ['boolean'],
             'sort_order' => ['integer', 'min:0', 'max:9999'],
         ]);
+
+        $data['slug'] = $this->audience?->slug ?? $slugs->generate(
+            $data['name'],
+            'audiences',
+            [],
+            $this->audience?->id
+        );
 
         if ($this->audience) {
             $this->audience->update($data);
@@ -60,6 +64,29 @@ class AudienceForm extends Component
         }
 
         $this->redirect(route('agenda.audiences.index'), navigate: true);
+    }
+
+    public function destroyRecord(): void
+    {
+        if (! $this->audience) {
+            return;
+        }
+
+        $this->authorize('delete', $this->audience);
+
+        $this->handleCatalogDelete(
+            function () {
+                if ($this->audience->events()->exists()) {
+                    throw ValidationException::withMessages([
+                        'delete' => __('Não é possível excluir: esta audiência está ligada a eventos.'),
+                    ]);
+                }
+
+                $this->audience->delete();
+            },
+            route('agenda.audiences.index'),
+            __('Audiência excluída.'),
+        );
     }
 
     public function render()

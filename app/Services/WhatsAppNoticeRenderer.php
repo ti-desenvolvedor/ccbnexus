@@ -28,7 +28,8 @@ class WhatsAppNoticeRenderer
             '{location}' => (string) ($location ?: '—'),
             '{location_hybrid}' => (string) ($overrides['location_hybrid'] ?? 'Será transmitida a partir da Administração responsável para as sedes vinculadas.'),
             '{dress_code}' => (string) ($overrides['dress_code_label'] ?? $dressCode),
-            '{audience_text}' => (string) ($overrides['audience_text'] ?? ''),
+            '{audience_text}' => (string) ($overrides['audience_text'] ?? $this->audienceText($event)),
+            '{whatsapp_groups}' => (string) ($overrides['whatsapp_groups'] ?? $this->whatsappGroupsText($event)),
             '{notes}' => (string) ($overrides['notes'] ?? ''),
             '{link}' => (string) ($overrides['link'] ?? ''),
             '{signature}' => (string) ($overrides['signature'] ?? ''),
@@ -37,7 +38,7 @@ class WhatsAppNoticeRenderer
         $text = strtr($template->body, $replace);
 
         // Limpeza leve: evita placeholders vazios com linhas excessivas.
-        $text = preg_replace("/\\n{3,}/", "\n\n", trim($text)) ?? trim($text);
+        $text = preg_replace('/\\n{3,}/', "\n\n", trim($text)) ?? trim($text);
 
         return $text;
     }
@@ -50,5 +51,26 @@ class WhatsAppNoticeRenderer
             default => '—',
         };
     }
-}
 
+    private function audienceText(Event $event): string
+    {
+        $event->loadMissing('publicPositions');
+        $names = $event->publicPositions->pluck('name')->filter()->values();
+        if ($names->isEmpty()) {
+            return '';
+        }
+
+        return 'Para: '.$names->implode(', ').'.';
+    }
+
+    private function whatsappGroupsText(Event $event): string
+    {
+        $event->loadMissing('whatsappGroups');
+        $names = $event->whatsappGroups->where('is_active', true)->pluck('name')->filter()->values();
+        if ($names->isEmpty()) {
+            return '';
+        }
+
+        return 'Grupos: '.$names->implode(', ').'.';
+    }
+}

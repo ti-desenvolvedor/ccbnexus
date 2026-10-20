@@ -2,9 +2,12 @@
 
 namespace App\Livewire\Infrastructure;
 
+use App\Models\Administration;
 use App\Models\Location;
+use App\Models\Regional;
 use App\Services\CepLookupService;
 use App\Services\IbgeMunicipioService;
+use App\Services\OrganizationalContextService;
 use App\Support\BrazilianStates;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Validation\Rule;
@@ -15,6 +18,12 @@ class LocationForm extends Component
     use AuthorizesRequests;
 
     public ?Location $location = null;
+
+    public ?int $administration_id = null;
+
+    public ?int $regional_id = null;
+
+    public bool $is_regional_hq = false;
 
     public string $name = '';
 
@@ -43,10 +52,13 @@ class LocationForm extends Component
 
     public ?string $address_feedback = null;
 
-    public function mount(): void
+    public function mount(OrganizationalContextService $context): void
     {
         if ($this->location) {
             $this->authorize('update', $this->location);
+            $this->administration_id = $this->location->administration_id;
+            $this->regional_id = $this->location->regional_id;
+            $this->is_regional_hq = $this->location->administration_id === null && $this->location->regional_id !== null;
             $this->name = $this->location->name;
             $this->line1 = (string) $this->location->line1;
             $this->number = (string) ($this->location->number ?? '');
@@ -58,6 +70,10 @@ class LocationForm extends Component
             $this->country = $this->location->country ?? 'BR';
         } else {
             $this->authorize('create', Location::class);
+            $prefillAdmin = request()->integer('administration_id') ?: $context->activeAdministrationId();
+            if ($prefillAdmin) {
+                $this->administration_id = $prefillAdmin;
+            }
         }
 
         if ($this->country === 'BR' && BrazilianStates::isValidUf($this->state)) {
@@ -166,6 +182,9 @@ class LocationForm extends Component
             'district' => ['nullable', 'string', 'max:120'],
             'country' => ['required', 'string', 'size:2'],
             'postal_code' => ['nullable', 'string', 'max:32'],
+            'is_regional_hq' => ['boolean'],
+            'administration_id' => ['nullable', 'exists:administrations,id'],
+            'regional_id' => ['nullable', 'exists:regionals,id'],
         ];
 
         if ($this->country === 'BR') {
@@ -181,6 +200,38 @@ class LocationForm extends Component
         }
 
         $data = $this->validate($rules);
+        $user = auth()->user();
+
+        if ($data['is_regional_hq']) {
+            if (! $data['regional_id']) {
+                $this->addError('regional_id', __('Selecione a regional para a sede.'));
+
+                return;
+            }
+            if (! $user->isSuperAdmin() && ! in_array((int) $data['regional_id'], $user->accessibleRegionalIds(), true)) {
+                $this->addError('regional_id', __('Sem permissão para esta regional.'));
+
+                return;
+            }
+            $data['administration_id'] = null;
+            $data['regional_id'] = (int) $data['regional_id'];
+        } else {
+            if (! $data['administration_id']) {
+                $this->addError('administration_id', __('Selecione a administração deste local.'));
+
+                return;
+            }
+            $admin = Administration::query()->findOrFail($data['administration_id']);
+            if (! $user->isSuperAdmin() && ! $user->canAccessAdministration($admin)) {
+                $this->addError('administration_id', __('Sem permissão para esta administração.'));
+
+                return;
+            }
+            $data['administration_id'] = (int) $data['administration_id'];
+            $data['regional_id'] = null;
+        }
+
+        unset($data['is_regional_hq']);
 
         if ($this->location) {
             $this->location->update($data);
@@ -195,8 +246,21 @@ class LocationForm extends Component
 
     public function render()
     {
+        $user = auth()->user();
+        $administrations = Administration::query()
+            ->with('regional')
+            ->when(! $user->isSuperAdmin(), fn ($q) => $q->whereIn('regional_id', $user->accessibleRegionalIds()))
+            ->orderBy('name')
+            ->limit(300)
+            ->get();
+        $regionals = $user->isSuperAdmin()
+            ? Regional::query()->orderBy('name')->get()
+            : Regional::query()->whereIn('id', $user->accessibleRegionalIds())->orderBy('name')->get();
+
         return view('livewire.infrastructure.location-form', [
             'brazilianStates' => BrazilianStates::all(),
+            'administrations' => $administrations,
+            'regionals' => $regionals,
         ]);
     }
 

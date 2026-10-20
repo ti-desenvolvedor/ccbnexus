@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\DeletesPublicCatalogItems;
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\PublicGroup;
 use App\Models\PublicSubgroup;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -11,6 +13,8 @@ use Livewire\WithPagination;
 class PublicSubgroupList extends Component
 {
     use AuthorizesRequests;
+    use DeletesPublicCatalogItems;
+    use UsesAccountPagination;
     use WithPagination;
 
     public PublicGroup $group;
@@ -31,7 +35,7 @@ class PublicSubgroupList extends Component
         $subgroups = PublicSubgroup::query()
             ->where('public_group_id', $this->group->id)
             ->orderBy('sort_order')
-            ->paginate(20);
+            ->paginate($this->paginatePerPage());
 
         return view('livewire.agenda.public-subgroup-list', [
             'subgroups' => $subgroups,

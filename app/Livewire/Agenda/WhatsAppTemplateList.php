@@ -2,15 +2,16 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\WhatsAppNoticeTemplate;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Str;
+use App\Services\OrganizationalContextService;
+use App\Services\SlugService;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class WhatsAppTemplateList extends Component
 {
-    use AuthorizesRequests;
+    use UsesAccountPagination;
     use WithPagination;
 
     protected $paginationTheme = 'tailwind';
@@ -18,12 +19,15 @@ class WhatsAppTemplateList extends Component
     public string $search = '';
 
     public bool $show_form = false;
+
     public ?int $editing_id = null;
 
     public string $name = '';
-    public string $slug = '';
+
     public string $body = '';
+
     public bool $is_active = true;
+
     public bool $is_default = false;
 
     public function updatingSearch(): void
@@ -45,22 +49,25 @@ class WhatsAppTemplateList extends Component
 
         $this->editing_id = $tpl->id;
         $this->name = $tpl->name;
-        $this->slug = $tpl->slug;
         $this->body = $tpl->body;
         $this->is_active = (bool) $tpl->is_active;
         $this->is_default = (bool) $tpl->is_default;
         $this->show_form = true;
     }
 
-    public function save(): void
+    public function save(SlugService $slugs): void
     {
         $data = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string', 'max:20000'],
             'is_active' => ['boolean'],
             'is_default' => ['boolean'],
         ]);
+
+        $slug = $this->editing_id
+            ? (WhatsAppNoticeTemplate::query()->find($this->editing_id)?->slug)
+            : null;
+        $slug = $slug ?? $slugs->generate($data['name'], 'whatsapp_notice_templates', [], $this->editing_id);
 
         if ($this->editing_id) {
             $tpl = WhatsAppNoticeTemplate::query()->findOrFail($this->editing_id);
@@ -68,7 +75,7 @@ class WhatsAppTemplateList extends Component
 
             $tpl->update([
                 'name' => $data['name'],
-                'slug' => $data['slug'],
+                'slug' => $slug,
                 'body' => $data['body'],
                 'is_active' => (bool) $data['is_active'],
                 // is_default só pode ser alterado por moderador (gate próprio)
@@ -76,9 +83,13 @@ class WhatsAppTemplateList extends Component
         } else {
             $this->authorize('create', WhatsAppNoticeTemplate::class);
 
+            $regionalId = app(OrganizationalContextService::class)->activeRegionalId()
+                ?? auth()->user()?->organizationalRegionalId();
+
             WhatsAppNoticeTemplate::query()->create([
+                'regional_id' => $regionalId,
                 'name' => $data['name'],
-                'slug' => $data['slug'],
+                'slug' => $slug,
                 'body' => $data['body'],
                 'is_active' => (bool) $data['is_active'],
                 'is_default' => false,
@@ -112,33 +123,41 @@ class WhatsAppTemplateList extends Component
     {
         $this->editing_id = null;
         $this->name = '';
-        $this->slug = '';
         $this->body = '';
         $this->is_active = true;
         $this->is_default = false;
     }
 
-    public function updatedName(string $value): void
-    {
-        if ($this->editing_id) {
-            return;
-        }
-        $this->slug = Str::slug($value);
-    }
-
-    public function render()
+    public function render(OrganizationalContextService $context)
     {
         $this->authorize('viewAny', WhatsAppNoticeTemplate::class);
 
+        $user = auth()->user();
         $query = WhatsAppNoticeTemplate::query()->orderByDesc('is_default')->orderBy('name');
+
+        if (! $user->isSuperAdmin()) {
+            $ids = $user->accessibleRegionalIds();
+            $query->where(function ($q) use ($ids) {
+                $q->whereIn('regional_id', $ids)->orWhereNull('regional_id');
+            });
+        }
+
+        $rid = $context->activeRegionalId();
+        if ($rid) {
+            $query->where(function ($q) use ($rid) {
+                $q->where('regional_id', $rid)->orWhereNull('regional_id');
+            });
+        }
+
         if ($this->search !== '') {
             $s = '%'.$this->search.'%';
-            $query->where('name', 'like', $s)->orWhere('slug', 'like', $s);
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', $s)->orWhere('slug', 'like', $s);
+            });
         }
 
         return view('livewire.agenda.whatsapp-template-list', [
-            'templates' => $query->paginate(12),
+            'templates' => $query->paginate($this->paginatePerPage()),
         ]);
     }
 }
-

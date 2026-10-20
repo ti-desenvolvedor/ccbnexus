@@ -1,13 +1,9 @@
 <x-ui.card title="{{ __('Grupos de público') }}">
+    @include('livewire.agenda.partials.public-catalog-delete-error')
     <div class="mb-4 flex flex-wrap items-end gap-3">
         <div>
             <label class="text-xs font-semibold text-slate-500">{{ __('Regional') }}</label>
-            <select wire:model.live="filter_regional_id" class="mt-1 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950">
-                <option value="">{{ __('Todas') }}</option>
-                @foreach ($regionals as $r)
-                    <option value="{{ $r->id }}">{{ $r->name }}</option>
-                @endforeach
-            </select>
+            <x-nexus.searchable-select wire:model.live="filter_regional_id" class="mt-1 min-w-[12rem]" :empty-label="__('Todas')" :search-placeholder="__('Buscar regional...')" :options="$regionals" />
         </div>
     </div>
     <div class="overflow-x-auto">
@@ -30,6 +26,14 @@
                             @can('update', $g)
                                 <a href="{{ route('agenda.public-groups.edit', $g) }}" wire:navigate class="text-primary-600 hover:underline">{{ __('Editar') }}</a>
                                 <a href="{{ route('agenda.public-subgroups.index', $g) }}" wire:navigate class="text-primary-600 hover:underline">{{ __('Subgrupos') }}</a>
+                            @endcan
+                            @can('delete', $g)
+                                <button
+                                    type="button"
+                                    wire:click="deletePublicGroup({{ $g->id }})"
+                                    wire:confirm="{{ __('Excluir este grupo? Só é possível se não houver subgrupos. Esta ação não pode ser desfeita.') }}"
+                                    class="text-rose-600 hover:underline"
+                                >{{ __('Excluir') }}</button>
                             @endcan
                         </td>
                     </tr>

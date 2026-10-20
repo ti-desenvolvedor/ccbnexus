@@ -2,24 +2,24 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\DestroysPublicCatalogFormRecords;
 use App\Models\PublicGroup;
 use App\Models\Regional;
+use App\Services\PublicAudience\PublicAudienceCatalogDeleteService;
+use App\Services\SlugService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class PublicGroupForm extends Component
 {
     use AuthorizesRequests;
+    use DestroysPublicCatalogFormRecords;
 
     public ?PublicGroup $publicGroup = null;
 
     public int $regional_id = 0;
 
     public string $name = '';
-
-    public string $slug = '';
 
     public bool $is_active = true;
 
@@ -31,7 +31,6 @@ class PublicGroupForm extends Component
             $this->authorize('update', $this->publicGroup);
             $this->regional_id = $this->publicGroup->regional_id;
             $this->name = $this->publicGroup->name;
-            $this->slug = $this->publicGroup->slug;
             $this->is_active = $this->publicGroup->is_active;
             $this->sort_order = (int) $this->publicGroup->sort_order;
         } else {
@@ -45,14 +44,7 @@ class PublicGroupForm extends Component
         }
     }
 
-    public function updatedName(string $value): void
-    {
-        if (! $this->publicGroup && $this->slug === '') {
-            $this->slug = Str::slug($value);
-        }
-    }
-
-    public function save(): void
+    public function save(SlugService $slugs): void
     {
         if ($this->publicGroup) {
             $this->authorize('update', $this->publicGroup);
@@ -67,18 +59,19 @@ class PublicGroupForm extends Component
             return;
         }
 
-        $slugRule = Rule::unique('public_groups', 'slug')->where('regional_id', $this->regional_id);
-        if ($this->publicGroup) {
-            $slugRule->ignore($this->publicGroup->id);
-        }
-
         $data = $this->validate([
             'regional_id' => ['required', 'exists:regionals,id'],
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slugRule],
             'is_active' => ['boolean'],
             'sort_order' => ['integer', 'min:0', 'max:9999'],
         ]);
+
+        $data['slug'] = $this->publicGroup?->slug ?? $slugs->generate(
+            $data['name'],
+            'public_groups',
+            ['regional_id' => (int) $data['regional_id']],
+            $this->publicGroup?->id
+        );
 
         if ($this->publicGroup) {
             $this->publicGroup->update($data);
@@ -89,6 +82,21 @@ class PublicGroupForm extends Component
         }
 
         $this->redirect(route('agenda.public-groups.index'), navigate: true);
+    }
+
+    public function destroyRecord(PublicAudienceCatalogDeleteService $deleter): void
+    {
+        if (! $this->publicGroup) {
+            return;
+        }
+
+        $this->authorize('delete', $this->publicGroup);
+
+        $this->handleCatalogDelete(
+            fn () => $deleter->deleteGroup($this->publicGroup),
+            route('agenda.public-groups.index'),
+            __('Grupo excluído.'),
+        );
     }
 
     public function render()

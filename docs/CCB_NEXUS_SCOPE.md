@@ -2,7 +2,7 @@
 
 **Diretório do projeto:** `C:\www\ccbnexus`  
 **Data de referência:** 2026-05-03  
-**Papel deste documento:** fonte única de escopo para orquestrador / analista / arquiteto; alinhamento com o que já existe; checklist de implementação por fases.
+**Papel deste documento:** fonte única de escopo para o gerente de projetos e o time (backend, frontend, QA, security, SQL, devops); alinhamento com o que já existe; checklist de implementação por fases.
 
 ---
 
@@ -30,13 +30,13 @@ Sistema modular **CCB Nexus** para: agenda, eventos, secretaria, avisos automát
 
 Ordem fixa em cada entrega:
 
-1. **Orquestrador** — decompõe trabalho, define ordem e critérios de aceite; **não gera código**.
-2. **Arquiteto** — boundaries, modelos, relacionamentos, evolução de schema.
-3. **UX/UI** — fluxos, telas, abas (ex.: evento), listagens.
-4. **Backend** — migrations, models, services, policies, jobs.
-5. **Frontend** — Livewire + views + integração.
-6. **Reviewer** — segurança, vazamento de escopo, edge cases.
-7. **DevOps** — quando necessário: filas Redis, observabilidade, performance.
+1. **Gerente de projetos** — decompõe trabalho, define aceite e delega; **não gera código**.
+2. **Backend** — boundaries, schema, models, services, policies, jobs.
+3. **Frontend** — Livewire, views e o contrato de usabilidade.
+4. **SQL performance** — quando há lista, filtro, agenda ou relatório.
+5. **Security** — vazamento de escopo, authz, auditoria.
+6. **QA** — aceite e regressão.
+7. **DevOps** — quando necessário: filas Redis, build, deploy.
 
 **Regra de ouro:** nunca “gerar o sistema inteiro” num único passo; sempre fatias revisáveis e migráveis.
 
@@ -54,29 +54,32 @@ Ordem fixa em cada entrega:
 - **Permissões:** o master lista tabelas `roles` / `role_user`; no projeto já existe **Spatie Laravel Permission** (`roles`, `permissions`, pivots) — **manter Spatie** como padrão de mercado.
 - **Eventos** com tipo, datas, local, sala, status, criador; recorrência; público; papéis; regras de notificação; aprovações; auditoria; pedidos de acesso.
 
-### 4.2 O que já existe no repositório (análise)
+### 4.2 O que já existe no repositório (análise) — atualizado 2026-10
 
 | Área                         | Estado atual | Observação |
 |-----------------------------|--------------|------------|
-| Auth / perfil               | Rotas `dashboard`, `profile`, `auth.php` | Base Laravel Breeze/Jetstream-like |
-| RBAC                        | `RolesAndPermissionsSeeder`, `config/permission.php`, migration Spatie | Alinhado a “boas práticas”; não duplicar modelo `role_user` manual |
-| Organização                 | `regionals`, `administrations`, `prayer_houses` | **Sem** `location_id` nas tabelas organizacionais |
-| Endereço                    | `addresses` **morph** (`addressable`) para Administração / Casa de oração | Endereço “embutido” no dono, não entidade `locations` compartilhada |
-| Salas                       | `meeting_rooms` com `owner` **morph** (Administração \| Casa) | Compartilhamento entre níveis **não** está no `room_assignments` do master |
-| Reservas                    | `room_reservations` com status, aprovação, notas | Bom núcleo para conflitos e fluxo de aprovação |
-| Referência eventos / avisos | `event_types`, `event_role_templates`, `notification_rule_templates` | Templates, ainda sem `events` / ocorrências |
-| Auditoria                   | `activity_log` (Spatie Activity Log) | Cobre parte do pedido de `audit_logs` |
-| Usuário                     | Tabela `users` mínima (name, email, password) | **Faltam** `phone`, `google_id`, FKs organizacionais, `is_super_admin` |
-| Agent memory (extra)        | `agent_memory_entries` + comando | Fora do master; pode coexistir |
+| Auth / perfil               | `dashboard`, `profile`, `auth.php`, pedido de acesso | Preferir fluxo solicitação→aprovação; restringir self-register em produção |
+| RBAC                        | Spatie roles/permissions + Policies | `teams=false`; papéis ainda globais (débito: escopo por regional) |
+| Organização                 | `regionals`, `administrations`, `prayer_houses` + `location_id` opcional | Hierarquia multi-regional implementada |
+| Locais                      | Tabela **`locations`** com dono `administration_id` XOR `regional_id` | Preferir `locations` nos forms; `addresses` morph = legado |
+| Salas                       | `meeting_rooms` (owner morph) + `room_assignments` | Visibilidade por escopo via assignments |
+| Reservas                    | `room_reservations` (status, aprovação, notas) | Conflitos em Service; endurecer race/lock |
+| Eventos / agenda            | `events`, RSVP, papéis, aprovações morph, WhatsApp | Livewire EventForm/List + ApprovalsQueue; canais `include_on_baptism_list` / WA |
+| Secretaria / boletim        | `baptism_list_reports`, notices/changes/collections, `whatsapp_groups` | Lista PDF + Marcações; seed Agenda Excel 2026 Embu |
+| Públicos                    | Taxonomia `public_groups/subgroups/departments/positions` + pivot evento | `audiences` plano ainda coexiste (deprecar); presets por tipo |
+| Contexto ativo              | `OrganizationalContextService` + middleware `nexus.context` | Promover seletor ao chrome global (topbar) |
+| Auditoria                   | Spatie Activity Log em vários models | Inclui User/AccessRequest/Approval + catálogo público |
+| Usuário                     | phone, google_id, FKs org, `is_super_admin`, UI theme | Provisionamento via aprovação de acesso |
+| Agent memory (extra)        | `agent_memory_entries` | Fora do master; pode coexistir |
 
-### 4.3 Lacunas principais (delta escopo → código)
+### 4.3 Lacunas principais (delta restante)
 
-1. Entidade **`locations`** (ou renomear mentalmente para “Local físico”) e FKs `location_id` em regionais / administrações / casas / salas / estacionamentos — hoje o endereço é **morph** granular, não reutilização explícita por ID.
-2. **`rooms` + `room_assignments`** vs `meeting_rooms` + `owner` morph — precisa **estratégia de evolução** (ver secção 5).
-3. **`events`**, **`event_recurrences`**, **`event_occurrences`**, **`audiences`**, **`event_roles`**, **`approvals`**, **`access_requests`**, **`parkings`** — **não** migrados ainda.
-4. UI CRUD: não há módulos Livewire de manutenção para organização / salas / eventos (só dashboard exemplo).
-5. Escopo de dados por **contexto ativo** (regional → admin → casa) — descrito em `AGENTS.md`; falta implementação transversal (middleware + sessão + policies).
-6. **`audiences` plano** não cobre **grupo → subgrupo → departamento (regional vs local) → cargo**; a taxonomia detalhada de **Públicos** está em `AGENTS.md` (secção *Públicos, grupos, departamentos e cargos*); implementação em fatias com pivôs para eventos e, depois, pessoas (N:N).
+1. **RBAC escopado** (Spatie teams ou `scoped_role_assignments`) — papéis Facilitador/Moderador por regional. Desenho em `docs/RBAC_SCOPED_DESIGN.md` (aguarda PO). Deprecação de audiences: `docs/DEPRECATE_AUDIENCES.md`. **(D4) Decisão pendente:** modelo final de RBAC escopado (Spatie `teams` vs pivot custom com `regional_id` / administração / casa) ainda não está fechado; Etapa 3 endurece `canAccessRegional` nas policies/listagens, mas não substitui papéis por regional.
+2. Endurecer **aprovação server-side** (reservas/eventos) e **locks** de conflito.
+3. Deprecar **`audiences`** em favor de `public_*` (decisão explícita em PR).
+4. UX Facilitador: menu, command palette, calendário semanal de salas, empty states, contexto no topbar.
+5. ~~Policies ainda **permission-only** em Parking / catálogo / templates WhatsApp / Approvals queue.~~ *(Etapa 3: checks de regional/escopo aplicados.)*
+6. **Pessoas** N:N e módulo Avisos/Relatórios ricos — fatias futuras (ver `AGENTS.md`).
 
 ### 4.4 Públicos — resumo para arquitetura
 
@@ -251,8 +254,8 @@ Cada módulo de manutenção (organização, salas, etc.) deve ter **lista**, **
 
 ### Revisão (cada PR)
 
-- [ ] Reviewer: vazamento de escopo entre regionais.
-- [ ] Reviewer: transações e race conditions em reservas.
+- [ ] Security: vazamento de escopo entre regionais.
+- [ ] QA: transações e race conditions em reservas.
 
 ---
 

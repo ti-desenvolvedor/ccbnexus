@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\DeletesPublicCatalogItems;
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\PublicPosition;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
@@ -10,7 +12,18 @@ use Livewire\WithPagination;
 class PublicPositionList extends Component
 {
     use AuthorizesRequests;
+    use DeletesPublicCatalogItems;
+    use UsesAccountPagination;
     use WithPagination;
+
+    public string $departmentId = '';
+
+    public function mount(): void
+    {
+        if (request()->filled('department')) {
+            $this->departmentId = (string) request('department');
+        }
+    }
 
     public function render()
     {
@@ -32,8 +45,12 @@ class PublicPositionList extends Component
             }
         }
 
+        if ($this->departmentId !== '') {
+            $query->where('public_department_id', (int) $this->departmentId);
+        }
+
         return view('livewire.agenda.public-position-list', [
-            'positions' => $query->paginate(25),
+            'positions' => $query->paginate($this->paginatePerPage()),
         ]);
     }
 }

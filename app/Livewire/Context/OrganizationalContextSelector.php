@@ -16,14 +16,44 @@ class OrganizationalContextSelector extends Component
 
     public null|string|int $prayerHouseId = null;
 
+    public bool $compact = false;
+
     public function mount(OrganizationalContextService $context): void
     {
-        $this->regionalId = $context->activeRegionalId();
-        $this->administrationId = $context->activeAdministrationId();
-        $this->prayerHouseId = $context->activePrayerHouseId();
+        $this->regionalId = $this->asSelectValue($context->activeRegionalId());
+        $this->administrationId = $this->asSelectValue($context->activeAdministrationId());
+        $this->prayerHouseId = $this->asSelectValue($context->activePrayerHouseId());
+    }
+
+    protected function asSelectValue(mixed $id): string
+    {
+        return $id === null || $id === '' ? '' : (string) $id;
+    }
+
+    public function updatedRegionalId(mixed $value = null, mixed $key = null): void
+    {
+        $this->administrationId = null;
+        $this->prayerHouseId = null;
+        $this->persist(app(OrganizationalContextService::class));
+    }
+
+    public function updatedAdministrationId(mixed $value = null, mixed $key = null): void
+    {
+        $this->prayerHouseId = null;
+        $this->persist(app(OrganizationalContextService::class));
+    }
+
+    public function updatedPrayerHouseId(mixed $value = null, mixed $key = null): void
+    {
+        $this->persist(app(OrganizationalContextService::class));
     }
 
     public function apply(OrganizationalContextService $context): void
+    {
+        $this->persist($context);
+    }
+
+    protected function persist(OrganizationalContextService $context): void
     {
         $user = auth()->user();
         if (! $user) {
@@ -70,13 +100,20 @@ class OrganizationalContextSelector extends Component
             return collect();
         }
 
-        $q = Administration::query()->orderBy('name');
+        if (! $this->regionalId) {
+            return collect();
+        }
+
+        $q = Administration::query()
+            ->where('regional_id', (int) $this->regionalId)
+            ->where('is_active', true)
+            ->orderBy('name');
+
         if (! $user->isSuperAdmin()) {
             $ids = $user->accessibleRegionalIds();
-            if ($ids === []) {
+            if ($ids === [] || ! in_array((int) $this->regionalId, $ids, true)) {
                 return collect();
             }
-            $q->whereIn('regional_id', $ids);
         }
 
         return $q->limit(200)->get();
@@ -89,7 +126,18 @@ class OrganizationalContextSelector extends Component
             return collect();
         }
 
-        $q = PrayerHouse::query()->with('administration')->orderBy('name');
+        if (! $this->administrationId) {
+            return collect();
+        }
+
+        $q = PrayerHouse::query()
+            ->with('administration')
+            ->where('administration_id', (int) $this->administrationId)
+            ->where('is_active', true)
+            ->orderByRaw('official_code IS NULL')
+            ->orderBy('official_code')
+            ->orderBy('name');
+
         if (! $user->isSuperAdmin()) {
             $ids = $user->accessibleRegionalIds();
             if ($ids === []) {

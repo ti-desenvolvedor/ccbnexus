@@ -17,10 +17,24 @@ class CcbReferenceDataSeeder extends Seeder
     public function run(): void
     {
         $eventTypes = [
-            ['name' => 'Batismo', 'slug' => 'batismo', 'sort_order' => 10],
-            ['name' => 'Santa Ceia', 'slug' => 'santa-ceia', 'sort_order' => 20],
-            ['name' => 'Reunião', 'slug' => 'reuniao', 'sort_order' => 30],
-            ['name' => 'Ensaio Regional', 'slug' => 'ensaio-regional', 'sort_order' => 40],
+            ['name' => 'Batismo', 'slug' => 'batismo', 'sort_order' => 10, 'bulletin' => true],
+            ['name' => 'Santa Ceia', 'slug' => 'santa-ceia', 'sort_order' => 20, 'bulletin' => true],
+            ['name' => 'Reunião', 'slug' => 'reuniao', 'sort_order' => 30, 'bulletin' => false],
+            ['name' => 'Ensaio Regional', 'slug' => 'ensaio-regional', 'sort_order' => 40, 'bulletin' => true],
+            ['name' => 'Reunião da Mocidade', 'slug' => 'reuniao-mocidade', 'sort_order' => 50, 'bulletin' => true],
+            ['name' => 'Culto para Jovens (12+)', 'slug' => 'culto-jovens-12', 'sort_order' => 60, 'bulletin' => true],
+            ['name' => 'RCO', 'slug' => 'rco', 'sort_order' => 70, 'bulletin' => true],
+            ['name' => 'RMA', 'slug' => 'rma', 'sort_order' => 80, 'bulletin' => true],
+            ['name' => 'RA', 'slug' => 'ra', 'sort_order' => 90, 'bulletin' => true],
+            ['name' => 'RRM', 'slug' => 'rrm', 'sort_order' => 100, 'bulletin' => true],
+            ['name' => 'RGA', 'slug' => 'rga', 'sort_order' => 110, 'bulletin' => true],
+            ['name' => 'AGO', 'slug' => 'ago', 'sort_order' => 120, 'bulletin' => false],
+            ['name' => 'RGE', 'slug' => 'rge', 'sort_order' => 130, 'bulletin' => false],
+            ['name' => 'Reunião Organistas', 'slug' => 'reuniao-organistas', 'sort_order' => 140, 'bulletin' => true],
+            ['name' => 'Obra da Piedade', 'slug' => 'reuniao-obra-piedade', 'sort_order' => 150, 'bulletin' => true],
+            ['name' => 'Comunicado', 'slug' => 'comunicado', 'sort_order' => 160, 'bulletin' => true],
+            ['name' => 'Mocidade Online (RMO)', 'slug' => 'mocidade-online', 'sort_order' => 55, 'bulletin' => true],
+            ['name' => 'Exame Musical', 'slug' => 'exame-musical', 'sort_order' => 170, 'bulletin' => false],
         ];
 
         foreach ($eventTypes as $row) {
@@ -30,6 +44,27 @@ class CcbReferenceDataSeeder extends Seeder
                     'name' => $row['name'],
                     'is_active' => true,
                     'sort_order' => $row['sort_order'],
+                    'meta' => [
+                        'default_include_on_baptism_list' => (bool) $row['bulletin'],
+                        'default_whatsapp_enabled' => ! $row['bulletin'] || in_array($row['slug'], ['batismo', 'reuniao-mocidade', 'ensaio-regional'], true),
+                        'report_section' => match ($row['slug']) {
+                            'batismo' => 'batismos',
+                            'reuniao-mocidade', 'mocidade-online' => 'mocidade',
+                            'culto-jovens-12' => 'jovens12',
+                            'ensaio-regional' => 'ensaios',
+                            'reuniao' => 'reunioes',
+                            'reuniao-organistas' => 'organistas',
+                            'reuniao-obra-piedade' => 'obra-piedade',
+                            'ra' => 'ra',
+                            'rrm' => 'rrm',
+                            'rga' => 'rga',
+                            'rco' => 'rco',
+                            'rma' => 'rma',
+                            'santa-ceia' => 'santa-ceia',
+                            'comunicado' => 'avisos',
+                            default => null,
+                        },
+                    ],
                 ],
             );
         }

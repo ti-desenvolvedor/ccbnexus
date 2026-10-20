@@ -5,7 +5,9 @@ namespace App\Livewire\Organization;
 use App\Models\Location;
 use App\Models\Regional;
 use App\Services\OrganizationalLocationService;
+use App\Services\SlugService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 
 class RegionalForm extends Component
@@ -16,8 +18,6 @@ class RegionalForm extends Component
 
     public string $name = '';
 
-    public string $slug = '';
-
     public bool $is_active = true;
 
     public ?int $location_id = null;
@@ -27,7 +27,6 @@ class RegionalForm extends Component
         if ($this->regional) {
             $this->authorize('update', $this->regional);
             $this->name = $this->regional->name;
-            $this->slug = $this->regional->slug;
             $this->is_active = $this->regional->is_active;
             $this->location_id = $this->regional->location_id;
         } else {
@@ -35,7 +34,7 @@ class RegionalForm extends Component
         }
     }
 
-    public function save(OrganizationalLocationService $locationScope): void
+    public function save(OrganizationalLocationService $locationScope, SlugService $slugs): void
     {
         if ($this->regional) {
             $this->authorize('update', $this->regional);
@@ -43,68 +42,75 @@ class RegionalForm extends Component
             $this->authorize('create', Regional::class);
         }
 
-        $rules = [
+        $data = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
             'is_active' => ['boolean'],
             'location_id' => ['nullable', 'exists:locations,id'],
-        ];
+        ]);
 
-        if ($this->regional) {
-            $rules['slug'][] = 'unique:regionals,slug,'.$this->regional->id;
-        } else {
-            $rules['slug'][] = 'unique:regionals,slug';
-        }
+        $data['slug'] = $this->regional?->slug ?? $slugs->generate(
+            $data['name'],
+            'regionals',
+            [],
+            $this->regional?->id
+        );
 
-        $data = $this->validate($rules);
+        $allowed = $this->regional
+            ? $locationScope->mergeCurrentLocation(
+                $locationScope->selectableIdsForRegional($this->regional->id),
+                $this->regional->location_id
+            )
+            : $locationScope->mergeCurrentLocation(
+                $locationScope->selectableIdsForNewRegional(),
+                $this->location_id
+            );
 
-        $user = auth()->user();
-        if (! $user->isSuperAdmin() && ($data['location_id'] ?? null)) {
-            $allowed = $this->regional
-                ? $locationScope->mergeCurrentLocation(
-                    $locationScope->selectableIdsForRegional($this->regional->id),
-                    $this->regional->location_id
-                )
-                : $locationScope->orphanLocationIds();
-            if (! in_array((int) $data['location_id'], $allowed, true)) {
-                $this->addError('location_id', __('Este local não está disponível para esta regional.'));
+        if (($data['location_id'] ?? null) && ! in_array((int) $data['location_id'], $allowed, true)) {
+            $this->addError('location_id', __('Este local não está disponível para esta regional.'));
 
-                return;
-            }
+            return;
         }
 
         if ($this->regional) {
             $this->regional->update($data);
+            if ($this->regional->location_id) {
+                Location::query()->where('id', $this->regional->location_id)->update([
+                    'regional_id' => $this->regional->id,
+                ]);
+            }
             session()->flash('status', __('Regional atualizada.'));
         } else {
-            Regional::query()->create($data);
+            $regional = Regional::query()->create($data);
+            if ($regional->location_id) {
+                Location::query()->where('id', $regional->location_id)->update([
+                    'regional_id' => $regional->id,
+                ]);
+            }
             session()->flash('status', __('Regional criada.'));
         }
 
         $this->redirect(route('organization.regionals.index'), navigate: true);
     }
 
-    public function render(OrganizationalLocationService $locationScope)
+    protected function locationOptions(OrganizationalLocationService $locationScope): Collection
     {
-        $user = auth()->user();
-        if ($user->isSuperAdmin()) {
-            $locations = Location::query()->orderBy('name')->limit(500)->get();
-        } elseif ($this->regional) {
-            $ids = $locationScope->mergeCurrentLocation(
+        $ids = $this->regional
+            ? $locationScope->mergeCurrentLocation(
                 $locationScope->selectableIdsForRegional($this->regional->id),
                 $this->location_id
-            );
-            $locations = $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
-        } else {
-            $ids = $locationScope->mergeCurrentLocation(
-                $locationScope->orphanLocationIds(),
+            )
+            : $locationScope->mergeCurrentLocation(
+                $locationScope->selectableIdsForNewRegional(),
                 $this->location_id
             );
-            $locations = $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
-        }
 
+        return $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
+    }
+
+    public function render(OrganizationalLocationService $locationScope)
+    {
         return view('livewire.organization.regional-form', [
-            'locations' => $locations,
+            'locations' => $this->locationOptions($locationScope),
         ]);
     }
 }

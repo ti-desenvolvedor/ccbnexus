@@ -1,4 +1,5 @@
 <x-ui.card title="{{ __('Subgrupos') }} — {{ $group->name }}">
+    @include('livewire.agenda.partials.public-catalog-delete-error')
     <div class="mb-4 flex flex-wrap gap-2">
         <a href="{{ route('agenda.public-groups.index') }}" wire:navigate class="text-sm text-primary-600 hover:underline">{{ __('← Grupos') }}</a>
         @can('create', \App\Models\PublicSubgroup::class)
@@ -22,6 +23,15 @@
                         <td class="px-3 py-2 text-right">
                             @can('update', $s)
                                 <a href="{{ route('agenda.public-subgroups.edit', [$group, $s]) }}" wire:navigate class="text-primary-600 hover:underline">{{ __('Editar') }}</a>
+                                <a href="{{ route('agenda.public-subgroup.departments', [$group, $s]) }}" wire:navigate class="text-primary-600 hover:underline">{{ __('Departamentos') }}</a>
+                            @endcan
+                            @can('delete', $s)
+                                <button
+                                    type="button"
+                                    wire:click="deletePublicSubgroup({{ $s->id }})"
+                                    wire:confirm="{{ __('Excluir este subgrupo? Esta ação não pode ser desfeita.') }}"
+                                    class="text-rose-600 hover:underline"
+                                >{{ __('Excluir') }}</button>
                             @endcan
                         </td>
                     </tr>

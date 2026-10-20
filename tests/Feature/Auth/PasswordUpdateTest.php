@@ -20,15 +20,15 @@ class PasswordUpdateTest extends TestCase
 
         $component = Volt::test('profile.update-password-form')
             ->set('current_password', 'password')
-            ->set('password', 'new-password')
-            ->set('password_confirmation', 'new-password')
+            ->set('password', 'Nova-senha1')
+            ->set('password_confirmation', 'Nova-senha1')
             ->call('updatePassword');
 
         $component
             ->assertHasNoErrors()
             ->assertNoRedirect();
 
-        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+        $this->assertTrue(Hash::check('Nova-senha1', $user->refresh()->password));
     }
 
     public function test_correct_password_must_be_provided_to_update_password(): void
@@ -39,12 +39,28 @@ class PasswordUpdateTest extends TestCase
 
         $component = Volt::test('profile.update-password-form')
             ->set('current_password', 'wrong-password')
-            ->set('password', 'new-password')
-            ->set('password_confirmation', 'new-password')
+            ->set('password', 'Nova-senha1')
+            ->set('password_confirmation', 'Nova-senha1')
             ->call('updatePassword');
 
         $component
             ->assertHasErrors(['current_password'])
             ->assertNoRedirect();
+    }
+
+    public function test_new_password_must_include_letter_number_and_symbol(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        Volt::test('profile.update-password-form')
+            ->set('current_password', 'password')
+            ->set('password', 'sem-numero')
+            ->set('password_confirmation', 'sem-numero')
+            ->call('updatePassword')
+            ->assertHasErrors(['password']);
+
+        $this->assertTrue(Hash::check('password', $user->refresh()->password));
     }
 }

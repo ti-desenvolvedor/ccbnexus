@@ -1,16 +1,24 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginCaptchaController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
 Route::middleware('guest')->group(function () {
-    Volt::route('register', 'pages.auth.register')
-        ->name('register');
+    if (config('nexus.allow_public_registration')) {
+        Volt::route('register', 'pages.auth.register')
+            ->name('register');
+    }
 
     Volt::route('login', 'pages.auth.login')
+        ->middleware('throttle:10,1')
         ->name('login');
+
+    Route::get('login/captcha', LoginCaptchaController::class)
+        ->middleware('throttle:30,1')
+        ->name('login.captcha');
 
     Volt::route('forgot-password', 'pages.auth.forgot-password')
         ->name('password.request');

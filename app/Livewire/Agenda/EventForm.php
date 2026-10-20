@@ -3,19 +3,26 @@
 namespace App\Livewire\Agenda;
 
 use App\Models\Event;
+use App\Models\EventRoleTemplate;
 use App\Models\EventType;
 use App\Models\Location;
 use App\Models\MeetingRoom;
+use App\Models\MinistryServant;
+use App\Models\PublicDepartment;
 use App\Models\Regional;
+use App\Models\WhatsAppGroup;
 use App\Models\WhatsAppNoticeTemplate;
 use App\Services\EventRecurrenceService;
 use App\Services\EventService;
+use App\Services\EventTypeAudiencePresetService;
 use App\Services\OrganizationalContextService;
 use App\Services\OrganizationalLocationService;
 use App\Services\PublicAudienceCatalogService;
+use App\Support\SimpleRichText;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class EventForm extends Component
@@ -71,6 +78,24 @@ class EventForm extends Component
 
     public bool $whatsapp_enabled = false;
 
+    public bool $include_on_baptism_list = false;
+
+    public bool $has_libras = false;
+
+    /** Pessoa do cadastro de quem atende. Vazio limpa a marcação; "legacy" conserva um nome livre antigo. */
+    public string $ministry_servant_id = '';
+
+    public string $unmatchedAttendantLabel = '';
+
+    public string $servant_name = '';
+
+    public string $servant_position_id = '';
+
+    public string $servant_phone = '';
+
+    /** @var array<int, int|string> */
+    public array $whatsapp_group_ids = [];
+
     public ?int $whatsapp_notice_template_id = null;
 
     public ?int $expected_attendees = null;
@@ -102,10 +127,19 @@ class EventForm extends Component
     /** @var array<int, int|string> */
     public array $public_position_ids = [];
 
+    public string $publicAudienceScope = PublicDepartment::SCOPE_REGIONAL;
+
     public string $cancel_reason = '';
 
-    public function mount(OrganizationalContextService $context): void
+    public string $type_template = '';
+
+    public bool $can_edit_type_template = false;
+
+    public function mount(OrganizationalContextService $context, EventTypeAudiencePresetService $presets): void
     {
+        $user = auth()->user();
+        $this->can_edit_type_template = (bool) ($user?->isSuperAdmin() || $user?->can('gerenciar_avisos'));
+
         if ($this->event) {
             $event = $this->event;
             if ($event->is_occurrence && $event->parent_event_id) {
@@ -138,10 +172,18 @@ class EventForm extends Component
             if ($event->recurrence_frequency === 'yearly' && is_array($event->recurrence_config)) {
                 $this->recurrence_interval_years = max(1, min(20, (int) ($event->recurrence_config['interval_years'] ?? 1)));
             }
+            $event->loadMissing(['roleAssignments.roleTemplate', 'whatsappGroups']);
             $this->public_position_ids = $event->publicPositions->pluck('id')->all();
             $this->attendance_mode = $event->attendance_mode ?? 'in_person';
             $this->dress_code = $event->dress_code;
             $this->whatsapp_enabled = (bool) $event->whatsapp_enabled;
+            $this->include_on_baptism_list = (bool) $event->include_on_baptism_list;
+            $this->has_libras = (bool) $event->has_libras;
+            $this->whatsapp_group_ids = $event->whatsappGroups->pluck('id')->all();
+            $atende = $event->roleAssignments->first(
+                fn ($a) => $a->roleTemplate?->slug === 'atende'
+            );
+            $this->hydrateAttendant($atende?->assignee_label, data_get($atende?->meta, 'ministry_servant_id'));
             $this->whatsapp_notice_template_id = $event->whatsapp_notice_template_id;
             $this->expected_attendees = $event->expected_attendees;
             $this->needs_sound_controller = (bool) $event->needs_sound_controller;
@@ -165,6 +207,220 @@ class EventForm extends Component
             $this->whatsapp_enabled = false;
             $this->whatsapp_notice_template_id = null;
         }
+
+        $this->loadTypeTemplate($presets);
+        $this->adoptTemplateDescription($presets, $this->type_template, false);
+    }
+
+    public function updatedRegionalId(): void
+    {
+        $this->public_position_ids = [];
+        $this->ministry_servant_id = '';
+        $this->unmatchedAttendantLabel = '';
+        $this->reset('servant_name', 'servant_position_id', 'servant_phone');
+    }
+
+    public function registerAttendant(): void
+    {
+        if (! $this->regional_id) {
+            $this->addError('servant_name', 'Selecione a regional do evento para cadastrar quem atende.');
+
+            return;
+        }
+
+        $user = auth()->user();
+        abort_unless($user && ($user->isSuperAdmin() || in_array((int) $this->regional_id, $user->accessibleRegionalIds(), true)), 403);
+
+        $servant = MinistryServant::register(
+            (int) $this->regional_id,
+            $this->servant_name,
+            (int) $this->servant_position_id,
+            $this->servant_phone,
+        );
+        $this->ministry_servant_id = (string) $servant->id;
+        $this->unmatchedAttendantLabel = '';
+        $this->reset('servant_name', 'servant_position_id', 'servant_phone');
+        session()->flash('attendant_status', 'Cadastro guardado. Salve o evento para marcar esta pessoa.');
+    }
+
+    public function updatedPublicAudienceScope(): void
+    {
+        $this->public_position_ids = [];
+    }
+
+    public function updatedEventTypeId(EventTypeAudiencePresetService $presets): void
+    {
+        $previousTemplate = $this->type_template;
+
+        if ($this->event_type_id) {
+            $type = EventType::query()->find($this->event_type_id);
+            if ($type) {
+                $this->include_on_baptism_list = $presets->defaultIncludeOnBaptismList($type);
+                $this->whatsapp_enabled = (bool) ($type->meta['default_whatsapp_enabled'] ?? false);
+            }
+        }
+
+        $this->loadTypeTemplate($presets);
+        $this->adoptTemplateDescription($presets, $previousTemplate, true);
+    }
+
+    public function loadTypeTemplate(EventTypeAudiencePresetService $presets): void
+    {
+        if (! $this->event_type_id) {
+            $this->type_template = '';
+
+            return;
+        }
+
+        $preset = $presets->presetForType((int) $this->event_type_id);
+        $this->type_template = (string) ($preset?->invitation_paragraph ?? '');
+        $this->dispatch('simple-editor-load', target: 'type_template', html: $this->type_template);
+    }
+
+    public function saveTypeTemplate(EventTypeAudiencePresetService $presets): void
+    {
+        abort_unless($this->can_edit_type_template, 403);
+
+        if (! $this->event_type_id) {
+            $this->addError('type_template', 'Selecione o tipo do evento.');
+
+            return;
+        }
+
+        $clean = SimpleRichText::sanitize($this->type_template);
+        if ($clean !== $this->type_template) {
+            $this->type_template = $clean;
+            $this->dispatch('simple-editor-load', target: 'type_template', html: $clean);
+        }
+
+        $this->validate([
+            'type_template' => ['nullable', 'string', 'max:20000'],
+        ]);
+
+        $previous = (string) ($presets->presetForType((int) $this->event_type_id)?->invitation_paragraph ?? '');
+
+        $presets->saveParagraph((int) $this->event_type_id, $this->type_template);
+        $this->adoptTemplateDescription($presets, $previous, true);
+        session()->flash('template_status', 'Modelo deste tipo guardado. As descrições que ainda usavam o texto anterior foram atualizadas.');
+    }
+
+    public function applyAudiencePreset(EventTypeAudiencePresetService $presets): void
+    {
+        if (! $this->event_type_id || ! $this->regional_id) {
+            $this->addError('audience_preset', __('Selecione tipo e regional primeiro.'));
+
+            return;
+        }
+        $preset = $presets->presetForType((int) $this->event_type_id);
+        if (! $preset) {
+            $this->addError('audience_preset', __('Não há público-modelo para este tipo.'));
+
+            return;
+        }
+        if ($this->public_position_ids !== []) {
+            // Keep existing selection unless empty — user asked for apply; merge positions.
+        }
+        $ids = $presets->resolvePositionIds($preset, (int) $this->regional_id);
+        $this->public_position_ids = array_values(array_unique(array_merge($this->public_position_ids, $ids)));
+        $this->adoptTemplateDescription($presets, (string) ($preset->invitation_paragraph ?? ''), true);
+    }
+
+    /**
+     * A descrição guarda os códigos do modelo ({date}, {location}, …).
+     * Só é substituída quando ainda está vazia ou igual ao modelo anterior.
+     */
+    protected function adoptTemplateDescription(EventTypeAudiencePresetService $presets, string $previousTemplate, bool $refreshEditor): void
+    {
+        if ($this->type_template === '' || ! $this->descriptionFollowsTemplate($presets, $previousTemplate)) {
+            return;
+        }
+
+        $this->description = $this->type_template;
+        if ($refreshEditor) {
+            $this->dispatch('simple-editor-load', target: 'description', html: $this->description);
+        }
+    }
+
+    protected function descriptionFollowsTemplate(EventTypeAudiencePresetService $presets, string $previousTemplate): bool
+    {
+        $current = trim($this->description);
+        if ($current === '') {
+            return true;
+        }
+
+        $candidates = array_values(array_unique(array_filter([
+            trim($previousTemplate),
+            trim($this->type_template),
+        ], fn (string $value) => $value !== '')));
+
+        foreach ($candidates as $template) {
+            if ($current === $template) {
+                return true;
+            }
+            $rendered = trim($presets->renderTemplate($template, $this->draftEvent()));
+            if ($rendered !== '' && $current === $rendered) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function draftEvent(): Event
+    {
+        $draft = new Event([
+            'title' => $this->title,
+            'regional_id' => $this->regional_id,
+            'location_id' => $this->location_id,
+        ]);
+        if ($starts = $this->formInstant($this->starts_at)) {
+            $draft->starts_at = $starts;
+        }
+        if ($ends = $this->formInstant($this->ends_at)) {
+            $draft->ends_at = $ends;
+        }
+        if ($this->regional_id) {
+            $draft->setRelation('regional', Regional::query()->find($this->regional_id));
+        }
+        if ($this->location_id) {
+            $draft->setRelation('location', Location::query()->find($this->location_id));
+        }
+
+        return $draft;
+    }
+
+    protected function formInstant(string $value): ?Carbon
+    {
+        if (trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    public function selectSubgroupPositions(int $subgroupId, PublicAudienceCatalogService $catalog): void
+    {
+        if (! $this->regional_id) {
+            return;
+        }
+
+        $ids = $catalog->positionIdsForSubgroup((int) $this->regional_id, $subgroupId, $this->publicAudienceScope);
+        $this->public_position_ids = array_values(array_unique(array_merge($this->public_position_ids, $ids)));
+    }
+
+    public function selectDepartmentPositions(int $departmentId, PublicAudienceCatalogService $catalog): void
+    {
+        $ids = $catalog->positionIdsForDepartment($departmentId);
+        $this->public_position_ids = array_values(array_unique(array_merge($this->public_position_ids, $ids)));
+    }
+
+    public function clearPublicPositions(): void
+    {
+        $this->public_position_ids = [];
     }
 
     public function updatedRecurrenceFrequency(?string $value): void
@@ -203,110 +459,154 @@ class EventForm extends Component
         }
 
         $allowed = $this->regional_id
-            ? $catalog->allowedPositionIdsForRegional(auth()->user(), (int) $this->regional_id)
+            ? $catalog->allowedPositionIdsForRegional(auth()->user(), (int) $this->regional_id, $this->publicAudienceScope)
             : [];
 
-        $data = $this->validate([
-            'regional_id' => ['nullable', 'exists:regionals,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:5000'],
-            'event_type_id' => ['nullable', 'exists:event_types,id'],
-            'starts_at' => ['required', 'date'],
-            'ends_at' => ['required', 'date', 'after:starts_at'],
-            'location_id' => ['nullable', 'exists:locations,id'],
-            'meeting_room_id' => ['nullable', 'exists:meeting_rooms,id'],
-            'status' => ['required', 'in:draft,pending_approval,published'],
-            'recurrence_frequency' => ['nullable', 'in:weekly,monthly_nth,yearly'],
-            'recurrence_interval_weeks' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:12',
-                Rule::requiredIf(fn () => $this->recurrence_frequency === 'weekly'),
-            ],
-            'recurrence_interval_years' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:20',
-                Rule::requiredIf(fn () => $this->recurrence_frequency === 'yearly'),
-            ],
-            'recurrence_until' => [
-                'nullable',
-                'date',
-                Rule::requiredIf(fn () => in_array($this->recurrence_frequency, ['weekly', 'monthly_nth', 'yearly'], true)),
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (! in_array($this->recurrence_frequency, ['weekly', 'monthly_nth', 'yearly'], true) || ! $value || $this->starts_at === '') {
-                        return;
-                    }
-                    try {
-                        $until = Carbon::parse($value)->startOfDay();
-                        $start = Carbon::parse($this->starts_at)->startOfDay();
-                        if ($until->lt($start)) {
-                            $fail(__('A data de fim da série deve ser igual ou posterior ao dia do primeiro evento.'));
+        $cleanDescription = SimpleRichText::sanitize($this->description);
+        if ($cleanDescription !== $this->description) {
+            $this->description = $cleanDescription;
+            $this->dispatch('simple-editor-load', target: 'description', html: $cleanDescription);
+        }
+
+        try {
+            $data = $this->validate([
+                'regional_id' => [
+                    auth()->user()?->isSuperAdmin() ? 'nullable' : 'required',
+                    'exists:regionals,id',
+                ],
+                'title' => ['required', 'string', 'max:255'],
+                'description' => ['nullable', 'string', 'max:20000'],
+                'event_type_id' => ['nullable', 'exists:event_types,id'],
+                'starts_at' => ['required', 'date'],
+                'ends_at' => ['required', 'date', 'after:starts_at'],
+                'location_id' => ['nullable', 'exists:locations,id'],
+                'meeting_room_id' => ['nullable', 'exists:meeting_rooms,id'],
+                'status' => ['required', 'in:draft,pending_approval,published'],
+                'recurrence_frequency' => ['nullable', 'in:weekly,monthly_nth,yearly'],
+                'recurrence_interval_weeks' => [
+                    'nullable',
+                    'integer',
+                    'min:1',
+                    'max:12',
+                    Rule::requiredIf(fn () => $this->recurrence_frequency === 'weekly'),
+                ],
+                'recurrence_interval_years' => [
+                    'nullable',
+                    'integer',
+                    'min:1',
+                    'max:20',
+                    Rule::requiredIf(fn () => $this->recurrence_frequency === 'yearly'),
+                ],
+                'recurrence_until' => [
+                    'nullable',
+                    'date',
+                    Rule::requiredIf(fn () => in_array($this->recurrence_frequency, ['weekly', 'monthly_nth', 'yearly'], true)),
+                    function (string $attribute, mixed $value, \Closure $fail): void {
+                        if (! in_array($this->recurrence_frequency, ['weekly', 'monthly_nth', 'yearly'], true) || ! $value || $this->starts_at === '') {
+                            return;
                         }
-                    } catch (\Throwable) {
-                        $fail(__('Data de fim inválida.'));
-                    }
-                },
-            ],
-            'recurrence_monthly_nth' => [
-                'nullable',
-                'integer',
-                Rule::in([-1, 1, 2, 3, 4, 5]),
-                Rule::requiredIf(fn () => $this->recurrence_frequency === 'monthly_nth'),
-            ],
-            'recurrence_monthly_weekday' => [
-                'nullable',
-                'integer',
-                'min:0',
-                'max:6',
-                Rule::requiredIf(fn () => $this->recurrence_frequency === 'monthly_nth'),
-            ],
-            'recurrence_months_filter' => [
-                'nullable',
-                'string',
-                Rule::in(['all', 'even', 'odd', 'list']),
-                Rule::requiredIf(fn () => $this->recurrence_frequency === 'monthly_nth'),
-            ],
-            'recurrence_months_list' => [
-                'array',
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    if ($this->recurrence_frequency !== 'monthly_nth' || $this->recurrence_months_filter !== 'list') {
-                        return;
-                    }
-                    $ids = array_values(array_unique(array_map('intval', is_array($value) ? $value : [])));
-                    if ($ids === []) {
-                        $fail(__('Selecione pelo menos um mês na grelha.'));
-                    }
-                },
-            ],
-            'recurrence_months_list.*' => ['integer', 'min:1', 'max:12'],
-            'attendance_mode' => ['required', 'in:in_person,online_only,hybrid'],
-            'dress_code' => ['nullable', 'in:social,esporte_fino'],
-            'whatsapp_enabled' => ['boolean'],
-            'whatsapp_notice_template_id' => [
-                'nullable',
-                'integer',
-                Rule::requiredIf(fn () => (bool) $this->whatsapp_enabled),
-                'exists:whatsapp_notice_templates,id',
-            ],
-            'expected_attendees' => ['nullable', 'integer', 'min:0', 'max:500000'],
-            'needs_sound_controller' => ['boolean'],
-            'needs_av' => ['boolean'],
-            'needs_parking' => ['boolean'],
-            'needs_meals' => ['boolean'],
-            'meal_coffee' => ['boolean'],
-            'meal_lunch' => ['boolean'],
-            'meal_snack' => ['boolean'],
-            'meal_dinner' => ['boolean'],
-            'needs_nursing' => ['boolean'],
-            'needs_valet' => ['boolean'],
-            'needs_other_materials' => ['boolean'],
-            'other_materials_note' => ['nullable', 'string', 'max:2000', 'required_if:needs_other_materials,true'],
-            'public_position_ids' => ['array'],
-            'public_position_ids.*' => ['integer', Rule::in($allowed)],
-        ]);
+                        try {
+                            $until = Carbon::parse($value)->startOfDay();
+                            $start = Carbon::parse($this->starts_at)->startOfDay();
+                            if ($until->lt($start)) {
+                                $fail(__('A data de fim da série deve ser igual ou posterior ao dia do primeiro evento.'));
+                            }
+                        } catch (\Throwable) {
+                            $fail(__('Data de fim inválida.'));
+                        }
+                    },
+                ],
+                'recurrence_monthly_nth' => [
+                    'nullable',
+                    'integer',
+                    Rule::in([-1, 1, 2, 3, 4, 5]),
+                    Rule::requiredIf(fn () => $this->recurrence_frequency === 'monthly_nth'),
+                ],
+                'recurrence_monthly_weekday' => [
+                    'nullable',
+                    'integer',
+                    'min:0',
+                    'max:6',
+                    Rule::requiredIf(fn () => $this->recurrence_frequency === 'monthly_nth'),
+                ],
+                'recurrence_months_filter' => [
+                    'nullable',
+                    'string',
+                    Rule::in(['all', 'even', 'odd', 'list']),
+                    Rule::requiredIf(fn () => $this->recurrence_frequency === 'monthly_nth'),
+                ],
+                'recurrence_months_list' => [
+                    'array',
+                    function (string $attribute, mixed $value, \Closure $fail): void {
+                        if ($this->recurrence_frequency !== 'monthly_nth' || $this->recurrence_months_filter !== 'list') {
+                            return;
+                        }
+                        $ids = array_values(array_unique(array_map('intval', is_array($value) ? $value : [])));
+                        if ($ids === []) {
+                            $fail(__('Selecione pelo menos um mês na grelha.'));
+                        }
+                    },
+                ],
+                'recurrence_months_list.*' => ['integer', 'min:1', 'max:12'],
+                'attendance_mode' => ['required', 'in:in_person,online_only,hybrid'],
+                'dress_code' => ['nullable', 'in:social,esporte_fino'],
+                'whatsapp_enabled' => ['boolean'],
+                'include_on_baptism_list' => ['boolean'],
+                'has_libras' => ['boolean'],
+                'ministry_servant_id' => [
+                    'nullable',
+                    'string',
+                    function (string $attribute, mixed $value, \Closure $fail): void {
+                        if ($value === null || $value === '' || $value === 'legacy') {
+                            if ($value === 'legacy' && $this->unmatchedAttendantLabel === '') {
+                                $fail('Escolha uma pessoa já cadastrada nesta regional.');
+                            }
+
+                            return;
+                        }
+                        if (! ctype_digit((string) $value)) {
+                            $fail('Escolha uma pessoa já cadastrada nesta regional.');
+
+                            return;
+                        }
+                        $belongs = $this->regional_id && MinistryServant::query()
+                            ->whereKey((int) $value)
+                            ->where('regional_id', (int) $this->regional_id)
+                            ->exists();
+                        if (! $belongs) {
+                            $fail('Escolha uma pessoa já cadastrada nesta regional.');
+                        }
+                    },
+                ],
+                'whatsapp_group_ids' => ['array'],
+                'whatsapp_group_ids.*' => ['integer', 'exists:whatsapp_groups,id'],
+                'whatsapp_notice_template_id' => [
+                    'nullable',
+                    'integer',
+                    Rule::requiredIf(fn () => (bool) $this->whatsapp_enabled),
+                    'exists:whatsapp_notice_templates,id',
+                ],
+                'expected_attendees' => ['nullable', 'integer', 'min:0', 'max:500000'],
+                'needs_sound_controller' => ['boolean'],
+                'needs_av' => ['boolean'],
+                'needs_parking' => ['boolean'],
+                'needs_meals' => ['boolean'],
+                'meal_coffee' => ['boolean'],
+                'meal_lunch' => ['boolean'],
+                'meal_snack' => ['boolean'],
+                'meal_dinner' => ['boolean'],
+                'needs_nursing' => ['boolean'],
+                'needs_valet' => ['boolean'],
+                'needs_other_materials' => ['boolean'],
+                'other_materials_note' => ['nullable', 'string', 'max:2000', 'required_if:needs_other_materials,true'],
+                'public_position_ids' => ['array'],
+                'public_position_ids.*' => ['integer', Rule::in($allowed)],
+            ]);
+        } catch (ValidationException $exception) {
+            $this->tab = $this->tabForValidationKeys(array_keys($exception->errors()));
+
+            throw $exception;
+        }
 
         if (! ($data['whatsapp_enabled'] ?? false)) {
             $data['whatsapp_notice_template_id'] = null;
@@ -317,6 +617,7 @@ class EventForm extends Component
                 : null;
             if ($tpl && $tpl->regional_id !== null && ($data['regional_id'] ?? null) !== null && (int) $tpl->regional_id !== (int) $data['regional_id']) {
                 $this->addError('whatsapp_notice_template_id', __('Este template não pertence à regional do evento.'));
+                $this->tab = 'main';
 
                 return;
             }
@@ -371,8 +672,7 @@ class EventForm extends Component
             $data['recurrence_interval_weeks'] = 1;
         }
 
-        $user = auth()->user();
-        if (! $user->isSuperAdmin() && ($data['location_id'] ?? null) && ($data['regional_id'] ?? null)) {
+        if (($data['location_id'] ?? null) && ($data['regional_id'] ?? null)) {
             $allowedLocs = $locationScope->mergeCurrentLocation(
                 $locationScope->selectableIdsForRegional((int) $data['regional_id']),
                 $this->event?->location_id
@@ -383,6 +683,7 @@ class EventForm extends Component
                 return;
             }
         }
+        $user = auth()->user();
         if ($data['meeting_room_id'] ?? null) {
             $room = MeetingRoom::query()->find($data['meeting_room_id']);
             if ($room && ! $user->canAccessMeetingRoom($room)) {
@@ -392,15 +693,143 @@ class EventForm extends Component
             }
         }
 
+        $ministryServantId = (string) ($data['ministry_servant_id'] ?? '');
+        $whatsappGroupIds = collect($data['whatsapp_group_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->values()->all();
+        unset($data['ministry_servant_id'], $data['whatsapp_group_ids']);
+
         if ($this->event) {
-            $events->update($this->event, $data, $user);
+            $saved = $events->update($this->event, $data, $user);
             session()->flash('status', __('Evento atualizado.'));
         } else {
-            $events->store($data, $user);
+            $saved = $events->store($data, $user);
             session()->flash('status', __('Evento criado.'));
         }
 
+        $this->syncAttendantAndGroups($saved, $ministryServantId, $whatsappGroupIds);
+
         $this->redirect(route('agenda.events.index'), navigate: true);
+    }
+
+    /**
+     * @param  list<int>  $whatsappGroupIds
+     */
+    protected function syncAttendantAndGroups(Event $event, string $ministryServantId, array $whatsappGroupIds): void
+    {
+        $templateId = EventRoleTemplate::query()->where('slug', 'atende')->value('id');
+        if ($templateId && $ministryServantId !== 'legacy') {
+            $existing = $event->roleAssignments()->where('event_role_template_id', $templateId)->first();
+            if ($ministryServantId !== '') {
+                $servant = MinistryServant::query()->findOrFail((int) $ministryServantId);
+                abort_unless((int) $servant->regional_id === (int) $event->regional_id, 403);
+                $servant->assignTo($event);
+            } elseif ($existing) {
+                $existing->delete();
+            }
+        }
+
+        $event->whatsappGroups()->sync($whatsappGroupIds);
+    }
+
+    protected function hydrateAttendant(mixed $label, mixed $servantId): void
+    {
+        $label = trim((string) ($label ?? ''));
+        $servantId = (int) $servantId;
+        if ($servantId <= 0 && $label !== '' && $this->regional_id) {
+            $match = MinistryServant::query()
+                ->where('regional_id', (int) $this->regional_id)
+                ->where('name_key', MinistryServant::nameKey($label))
+                ->first();
+            $servantId = (int) ($match?->id ?? 0);
+        }
+
+        $belongs = $servantId > 0 && $this->regional_id && MinistryServant::query()
+            ->whereKey($servantId)
+            ->where('regional_id', (int) $this->regional_id)
+            ->exists();
+
+        if ($belongs) {
+            $this->ministry_servant_id = (string) $servantId;
+            $this->unmatchedAttendantLabel = '';
+
+            return;
+        }
+
+        $this->ministry_servant_id = $label !== '' ? 'legacy' : '';
+        $this->unmatchedAttendantLabel = $label;
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function tabFieldMap(): array
+    {
+        return [
+            'main' => ['title', 'regional_id', 'event_type_id', 'starts_at', 'ends_at', 'location_id', 'attendance_mode', 'dress_code', 'whatsapp_enabled', 'include_on_baptism_list', 'ministry_servant_id', 'description', 'whatsapp_notice_template_id', 'servant_name', 'servant_position_id', 'servant_phone'],
+            'local' => ['meeting_room_id'],
+            'audience' => ['public_position_ids'],
+            'recurrence' => ['recurrence_frequency', 'recurrence_interval_weeks', 'recurrence_interval_years', 'recurrence_until', 'recurrence_monthly_nth', 'recurrence_monthly_weekday', 'recurrence_months_filter', 'recurrence_months_list'],
+            'structure' => ['expected_attendees', 'other_materials_note', 'has_libras'],
+            'people' => ['whatsapp_group_ids', 'audience_preset'],
+        ];
+    }
+
+    /**
+     * @param  list<string>  $keys
+     */
+    private function tabForValidationKeys(array $keys): string
+    {
+        foreach ($this->tabFieldMap() as $tab => $fields) {
+            foreach ($keys as $key) {
+                foreach ($fields as $field) {
+                    if ($key === $field || str_starts_with($key, $field.'.')) {
+                        return $tab;
+                    }
+                }
+            }
+        }
+
+        return $this->tab;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function tabErrorCounts(): array
+    {
+        $keys = $this->getErrorBag()->keys();
+        $counts = [];
+
+        foreach ($this->tabFieldMap() as $tab => $fields) {
+            $counts[$tab] = 0;
+            foreach ($keys as $key) {
+                foreach ($fields as $field) {
+                    if ($key === $field || str_starts_with($key, $field.'.')) {
+                        $counts[$tab]++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return $counts;
+    }
+
+    public function publish(EventService $events, OrganizationalLocationService $locationScope, PublicAudienceCatalogService $catalog): void
+    {
+        $user = auth()->user();
+        $this->status = ($user && ($user->isSuperAdmin() || $user->can('aprovar_evento')))
+            ? 'published'
+            : 'pending_approval';
+        $this->save($events, $locationScope, $catalog);
+    }
+
+    public function saveDraft(EventService $events, OrganizationalLocationService $locationScope, PublicAudienceCatalogService $catalog): void
+    {
+        if ($this->event?->status !== 'published') {
+            $this->status = 'draft';
+        }
+
+        $this->save($events, $locationScope, $catalog);
     }
 
     public function cancelEvent(EventService $eventsService): void
@@ -418,31 +847,42 @@ class EventForm extends Component
         OrganizationalLocationService $locationScope,
         PublicAudienceCatalogService $catalog,
         EventRecurrenceService $recurrenceService,
+        OrganizationalContextService $context,
+        EventTypeAudiencePresetService $presets,
     ) {
         $user = auth()->user();
         $regionals = $user->isSuperAdmin()
             ? Regional::query()->orderBy('name')->get()
             : Regional::query()->whereIn('id', $user->accessibleRegionalIds())->orderBy('name')->get();
 
-        if ($user->isSuperAdmin()) {
-            $locations = Location::query()->orderBy('name')->limit(500)->get();
-        } elseif ($this->regional_id) {
+        if ($this->regional_id) {
             $ids = $locationScope->mergeCurrentLocation(
                 $locationScope->selectableIdsForRegional((int) $this->regional_id),
                 $this->location_id
             );
-            $locations = $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
         } else {
-            $ids = collect($user->accessibleRegionalIds())
+            $regionalIds = $user->isSuperAdmin()
+                ? Regional::query()->pluck('id')->all()
+                : $user->accessibleRegionalIds();
+            $ids = collect($regionalIds)
                 ->flatMap(fn (int $rid) => $locationScope->selectableIdsForRegional($rid))
                 ->unique()
                 ->values()
                 ->all();
             $ids = $locationScope->mergeCurrentLocation($ids, $this->location_id);
-            $locations = $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
         }
+        $locations = $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
 
-        $positionsGrouped = $catalog->positionsGroupedForEventForm($user, $this->regional_id);
+        $administrationId = $this->publicAudienceScope === PublicDepartment::SCOPE_ADMINISTRATION
+            ? $context->activeAdministrationId()
+            : null;
+
+        $audiencePicker = $catalog->audiencePickerForEvent(
+            $user,
+            $this->regional_id,
+            $this->publicAudienceScope,
+            $administrationId,
+        );
 
         $recurrenceSeriesWeekday = null;
         if ($this->starts_at !== '') {
@@ -553,9 +993,27 @@ class EventForm extends Component
             'eventTypes' => EventType::query()->where('is_active', true)->orderBy('sort_order')->get(),
             'locations' => $locations,
             'meetingRooms' => MeetingRoom::query()->visibleToUser($user)->where('is_active', true)->orderBy('name')->get(),
-            'positionsGrouped' => $positionsGrouped,
+            'audiencePicker' => $audiencePicker,
             'recurrenceSeriesWeekday' => $recurrenceSeriesWeekday,
             'recurrencePreview' => $recurrencePreview,
+            'placeholderFields' => $presets->placeholderCatalog(),
+            'descriptionPreview' => $presets->containsPlaceholder($this->description)
+                ? $presets->renderTemplate($this->description, $this->draftEvent())
+                : '',
+            'whatsappGroups' => $this->regional_id
+                ? WhatsAppGroup::query()
+                    ->where('regional_id', $this->regional_id)
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get()
+                : collect(),
+            'ministryServants' => $this->regional_id
+                ? MinistryServant::query()->where('regional_id', (int) $this->regional_id)->orderBy('full_name')->get()
+                : collect(),
+            'ministryOffices' => $this->regional_id
+                ? $catalog->ministryOffices((int) $this->regional_id)
+                : collect(),
+            'tabErrorCounts' => $this->tabErrorCounts(),
         ]);
     }
 

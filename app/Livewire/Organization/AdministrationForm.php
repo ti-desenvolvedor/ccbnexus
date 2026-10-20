@@ -6,8 +6,9 @@ use App\Models\Administration;
 use App\Models\Location;
 use App\Models\Regional;
 use App\Services\OrganizationalLocationService;
+use App\Services\SlugService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 
 class AdministrationForm extends Component
@@ -20,8 +21,6 @@ class AdministrationForm extends Component
 
     public string $name = '';
 
-    public string $slug = '';
-
     public bool $is_active = true;
 
     public ?int $location_id = null;
@@ -32,7 +31,6 @@ class AdministrationForm extends Component
             $this->authorize('update', $this->administration);
             $this->regional_id = $this->administration->regional_id;
             $this->name = $this->administration->name;
-            $this->slug = $this->administration->slug;
             $this->is_active = $this->administration->is_active;
             $this->location_id = $this->administration->location_id;
         } else {
@@ -46,7 +44,18 @@ class AdministrationForm extends Component
         }
     }
 
-    public function save(OrganizationalLocationService $locationScope): void
+    public function updatedRegionalId(): void
+    {
+        if (! $this->administration) {
+            $allowed = app(OrganizationalLocationService::class)
+                ->selectableIdsForNewAdministration((int) $this->regional_id);
+            if ($this->location_id && ! in_array((int) $this->location_id, $allowed, true)) {
+                $this->location_id = null;
+            }
+        }
+    }
+
+    public function save(OrganizationalLocationService $locationScope, SlugService $slugs): void
     {
         if ($this->administration) {
             $this->authorize('update', $this->administration);
@@ -62,43 +71,76 @@ class AdministrationForm extends Component
             return;
         }
 
-        $slugRule = Rule::unique('administrations', 'slug')
-            ->where('regional_id', $this->regional_id);
-        if ($this->administration) {
-            $slugRule->ignore($this->administration->id);
-        }
-
         $data = $this->validate([
             'regional_id' => ['required', 'exists:regionals,id'],
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slugRule],
             'is_active' => ['boolean'],
             'location_id' => ['nullable', 'exists:locations,id'],
         ]);
 
-        if (! $user->isSuperAdmin() && ($data['location_id'] ?? null)) {
-            $allowed = $this->administration
-                ? $locationScope->mergeCurrentLocation(
-                    $locationScope->selectableIdsForAdministration($this->administration->id),
-                    $this->administration->location_id
-                )
-                : $locationScope->selectableIdsForNewAdministration((int) $data['regional_id']);
-            if (! in_array((int) $data['location_id'], $allowed, true)) {
-                $this->addError('location_id', __('Este local não pertence ao contexto desta administração.'));
+        $data['slug'] = $this->administration?->slug ?? $slugs->generate(
+            $data['name'],
+            'administrations',
+            ['regional_id' => (int) $data['regional_id']],
+            $this->administration?->id
+        );
 
-                return;
-            }
+        $allowed = $this->administration
+            ? $locationScope->mergeCurrentLocation(
+                $locationScope->selectableIdsForAdministration($this->administration->id),
+                $this->administration->location_id
+            )
+            : $locationScope->mergeCurrentLocation(
+                $locationScope->selectableIdsForNewAdministration((int) $data['regional_id']),
+                $this->location_id
+            );
+
+        if (($data['location_id'] ?? null) && ! in_array((int) $data['location_id'], $allowed, true)) {
+            $this->addError('location_id', __('Este local não pertence ao contexto desta administração.'));
+
+            return;
         }
 
         if ($this->administration) {
             $this->administration->update($data);
             session()->flash('status', __('Administração atualizada.'));
         } else {
-            Administration::query()->create($data);
+            $admin = Administration::query()->create($data);
+            if ($admin->location_id) {
+                Location::query()->where('id', $admin->location_id)->update([
+                    'administration_id' => $admin->id,
+                ]);
+            }
             session()->flash('status', __('Administração criada.'));
+            $this->redirect(route('organization.administrations.index'), navigate: true);
+
+            return;
+        }
+
+        if ($this->administration->location_id) {
+            Location::query()->where('id', $this->administration->location_id)->update([
+                'administration_id' => $this->administration->id,
+            ]);
         }
 
         $this->redirect(route('organization.administrations.index'), navigate: true);
+    }
+
+    protected function locationOptions(OrganizationalLocationService $locationScope): Collection
+    {
+        if ($this->administration) {
+            $ids = $locationScope->mergeCurrentLocation(
+                $locationScope->selectableIdsForAdministration($this->administration->id),
+                $this->location_id
+            );
+        } else {
+            $ids = $locationScope->mergeCurrentLocation(
+                $locationScope->selectableIdsForNewAdministration((int) $this->regional_id),
+                $this->location_id
+            );
+        }
+
+        return $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
     }
 
     public function render(OrganizationalLocationService $locationScope)
@@ -108,25 +150,9 @@ class AdministrationForm extends Component
             ? Regional::query()->orderBy('name')->get()
             : Regional::query()->whereIn('id', $user->accessibleRegionalIds())->orderBy('name')->get();
 
-        if ($user->isSuperAdmin()) {
-            $locations = Location::query()->orderBy('name')->limit(500)->get();
-        } elseif ($this->administration) {
-            $ids = $locationScope->mergeCurrentLocation(
-                $locationScope->selectableIdsForAdministration($this->administration->id),
-                $this->location_id
-            );
-            $locations = $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
-        } else {
-            $ids = $locationScope->mergeCurrentLocation(
-                $locationScope->selectableIdsForNewAdministration((int) $this->regional_id),
-                $this->location_id
-            );
-            $locations = $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
-        }
-
         return view('livewire.organization.administration-form', [
             'regionals' => $regionals,
-            'locations' => $locations,
+            'locations' => $this->locationOptions($locationScope),
         ]);
     }
 }

@@ -8,12 +8,17 @@
 .env
 .env.backup
 .env.production
+.env.hostinger
 /database/database.sqlite
 Homestead.json
 Homestead.yaml
 auth.json
 npm-debug.log
 yarn-error.log
+/ftp-deploy
+/ftp-deploy-delta
+.ftp-last-deploy
+.ftp-deploy-manifest.json
 /.fleet
 /.idea
 /.vscode

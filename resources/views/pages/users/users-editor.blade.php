@@ -1,8 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <div class="text-xs font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">Utilizadores</div>
-            <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{{ $user ? 'Editar utilizador' : 'Novo utilizador' }}</h1>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{{ $user ? 'Editar usuário' : 'Novo usuário' }}</h1>
         </div>
     </x-slot>
     @if ($user)

@@ -30,13 +30,11 @@ class ParkingForm extends Component
         } else {
             $this->authorize('create', Parking::class);
             $user = auth()->user();
-            if ($user->isSuperAdmin()) {
-                $this->location_id = (int) (Location::query()->value('id') ?? 0);
-            } else {
-                $svc = app(OrganizationalLocationService::class);
-                $ids = $svc->visibleLocationIdsForUser($user) ?? [];
-                $this->location_id = (int) (collect($ids)->first() ?? Location::query()->value('id') ?? 0);
-            }
+            $svc = app(OrganizationalLocationService::class);
+            $ids = $user->isSuperAdmin()
+                ? Location::query()->pluck('id')->all()
+                : ($svc->visibleLocationIdsForUser($user) ?? []);
+            $this->location_id = (int) (collect($ids)->first() ?? 0);
         }
     }
 
@@ -55,13 +53,13 @@ class ParkingForm extends Component
         ]);
 
         $user = auth()->user();
-        if (! $user->isSuperAdmin()) {
-            $visible = $locationScope->visibleLocationIdsForUser($user);
-            if (! is_array($visible) || ! in_array((int) $data['location_id'], $visible, true)) {
-                $this->addError('location_id', __('Este local está fora do seu âmbito organizacional.'));
+        $visible = $user->isSuperAdmin()
+            ? null
+            : $locationScope->visibleLocationIdsForUser($user);
+        if (is_array($visible) && ! in_array((int) $data['location_id'], $visible, true)) {
+            $this->addError('location_id', __('Este local está fora do seu âmbito organizacional.'));
 
-                return;
-            }
+            return;
         }
 
         if ($this->parking) {
@@ -78,13 +76,11 @@ class ParkingForm extends Component
     public function render(OrganizationalLocationService $locationScope)
     {
         $user = auth()->user();
-        if ($user->isSuperAdmin()) {
-            $locations = Location::query()->orderBy('name')->limit(500)->get();
-        } else {
-            $ids = $locationScope->visibleLocationIdsForUser($user) ?? [];
-            $ids = $locationScope->mergeCurrentLocation($ids, $this->location_id ?: null);
-            $locations = $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
-        }
+        $scoped = $user->isSuperAdmin() ? null : $locationScope->visibleLocationIdsForUser($user);
+        $ids = $locationScope->mergeCurrentLocation($scoped ?? [], $this->location_id ?: null);
+        $locations = $user->isSuperAdmin()
+            ? Location::query()->orderBy('name')->limit(500)->get()
+            : $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
 
         return view('livewire.infrastructure.parking-form', [
             'locations' => $locations,

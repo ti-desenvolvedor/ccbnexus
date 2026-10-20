@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Parking;
 use App\Models\User;
+use App\Services\OrganizationalLocationService;
 
 class ParkingPolicy
 {
@@ -14,7 +15,17 @@ class ParkingPolicy
 
     public function view(User $user, Parking $parking): bool
     {
-        return $this->viewAny($user);
+        if (! $this->viewAny($user)) {
+            return false;
+        }
+
+        $parking->loadMissing('location');
+
+        if (! $parking->location) {
+            return $user->isSuperAdmin();
+        }
+
+        return app(OrganizationalLocationService::class)->userMayAccessLocation($user, $parking->location);
     }
 
     public function create(User $user): bool
@@ -24,11 +35,11 @@ class ParkingPolicy
 
     public function update(User $user, Parking $parking): bool
     {
-        return $this->viewAny($user);
+        return $this->view($user, $parking);
     }
 
     public function delete(User $user, Parking $parking): bool
     {
-        return $this->viewAny($user);
+        return $this->update($user, $parking);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Organization;
 
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\Regional;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
@@ -10,6 +11,7 @@ use Livewire\WithPagination;
 class RegionalList extends Component
 {
     use AuthorizesRequests;
+    use UsesAccountPagination;
     use WithPagination;
 
     public string $search = '';
@@ -45,7 +47,7 @@ class RegionalList extends Component
         }
 
         return view('livewire.organization.regional-list', [
-            'regionals' => $query->paginate(12),
+            'regionals' => $query->paginate($this->paginatePerPage()),
         ]);
     }
 }

@@ -7,17 +7,21 @@ use App\Models\Event;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class EventService
 {
     public function __construct(
         protected EventRecurrenceService $recurrence,
+        protected OrganizationalContextService $context,
     ) {}
 
     public function store(array $data, User $user): Event
     {
         return DB::transaction(function () use ($data, $user) {
-            $status = $data['status'] ?? ($user->can('aprovar_evento') ? 'published' : 'draft');
+            $data = $this->ensureRegionalOnCreate($data, $user);
+
+            $status = $this->resolveWritableStatus($data['status'] ?? null, $user);
             $payload = collect($data)->except([
                 'audience_ids', 'public_position_ids', 'approval_note',
                 'recurrence_monthly_nth', 'recurrence_monthly_weekday', 'recurrence_months_filter', 'recurrence_months_list',
@@ -53,12 +57,17 @@ class EventService
 
     public function update(Event $event, array $data, User $user): Event
     {
-        return DB::transaction(function () use ($event, $data) {
+        return DB::transaction(function () use ($event, $data, $user) {
             $payload = collect($data)->except([
                 'audience_ids', 'public_position_ids', 'approval_note',
                 'recurrence_monthly_nth', 'recurrence_monthly_weekday', 'recurrence_months_filter', 'recurrence_months_list',
                 'recurrence_interval_years',
             ])->all();
+
+            if (array_key_exists('status', $payload)) {
+                $payload['status'] = $this->resolveWritableStatus($payload['status'], $user, $event->status);
+            }
+
             $event->update($payload);
             if (array_key_exists('audience_ids', $data)) {
                 $event->audiences()->sync(
@@ -126,5 +135,57 @@ class EventService
             'requested_by_user_id' => $user->id,
             'request_note' => $note,
         ]);
+    }
+
+    /**
+     * Eventos sem regional só para super-admin; restantes herdam contexto ativo / vínculo do utilizador.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function ensureRegionalOnCreate(array $data, User $user): array
+    {
+        $regionalId = $data['regional_id'] ?? null;
+        if ($regionalId !== null && $regionalId !== '' && (int) $regionalId > 0) {
+            $data['regional_id'] = (int) $regionalId;
+
+            return $data;
+        }
+
+        if ($user->isSuperAdmin()) {
+            $data['regional_id'] = null;
+
+            return $data;
+        }
+
+        $fallback = $this->context->activeRegionalId() ?? $user->organizationalRegionalId();
+        if ($fallback === null) {
+            throw ValidationException::withMessages([
+                'regional_id' => [__('Selecione uma regional para o evento.')],
+            ]);
+        }
+
+        $data['regional_id'] = $fallback;
+
+        return $data;
+    }
+
+    /**
+     * published só com aprovar_evento; restantes estados permitidos sem elevação.
+     */
+    protected function resolveWritableStatus(?string $requested, User $user, ?string $current = null): string
+    {
+        $requested = $requested ?: ($current ?: 'draft');
+        $canPublish = $user->isSuperAdmin() || $user->can('aprovar_evento');
+
+        if ($requested === 'published' && ! $canPublish) {
+            return 'pending_approval';
+        }
+
+        if (! in_array($requested, ['draft', 'pending_approval', 'published', 'cancelled', 'rejected'], true)) {
+            return 'draft';
+        }
+
+        return $requested;
     }
 }

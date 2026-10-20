@@ -2,16 +2,18 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\DestroysPublicCatalogFormRecords;
 use App\Models\PublicGroup;
 use App\Models\PublicSubgroup;
+use App\Services\PublicAudience\PublicAudienceCatalogDeleteService;
+use App\Services\SlugService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class PublicSubgroupForm extends Component
 {
     use AuthorizesRequests;
+    use DestroysPublicCatalogFormRecords;
 
     public PublicGroup $group;
 
@@ -19,16 +21,14 @@ class PublicSubgroupForm extends Component
 
     public string $name = '';
 
-    public string $slug = '';
-
     public bool $is_active = true;
 
     public int $sort_order = 0;
 
-    public function mount(PublicGroup $group, ?PublicSubgroup $publicSubgroup = null): void
+    public function mount(PublicGroup $group, ?int $publicSubgroupId = null): void
     {
         $this->group = $group;
-        $this->publicSubgroup = $publicSubgroup;
+        $this->publicSubgroup = $publicSubgroupId ? PublicSubgroup::findOrFail($publicSubgroupId) : null;
 
         $user = auth()->user();
         if (! $user->isSuperAdmin() && ! $user->canAccessRegional($group->regional)) {
@@ -41,7 +41,6 @@ class PublicSubgroupForm extends Component
                 abort(404);
             }
             $this->name = $this->publicSubgroup->name;
-            $this->slug = $this->publicSubgroup->slug;
             $this->is_active = $this->publicSubgroup->is_active;
             $this->sort_order = (int) $this->publicSubgroup->sort_order;
         } else {
@@ -49,14 +48,7 @@ class PublicSubgroupForm extends Component
         }
     }
 
-    public function updatedName(string $value): void
-    {
-        if (! $this->publicSubgroup && $this->slug === '') {
-            $this->slug = Str::slug($value);
-        }
-    }
-
-    public function save(): void
+    public function save(SlugService $slugs): void
     {
         if ($this->publicSubgroup) {
             $this->authorize('update', $this->publicSubgroup);
@@ -64,17 +56,18 @@ class PublicSubgroupForm extends Component
             $this->authorize('create', PublicSubgroup::class);
         }
 
-        $slugRule = Rule::unique('public_subgroups', 'slug')->where('public_group_id', $this->group->id);
-        if ($this->publicSubgroup) {
-            $slugRule->ignore($this->publicSubgroup->id);
-        }
-
         $data = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slugRule],
             'is_active' => ['boolean'],
             'sort_order' => ['integer', 'min:0', 'max:9999'],
         ]);
+
+        $data['slug'] = $this->publicSubgroup?->slug ?? $slugs->generate(
+            $data['name'],
+            'public_subgroups',
+            ['public_group_id' => $this->group->id],
+            $this->publicSubgroup?->id
+        );
 
         $payload = array_merge($data, ['public_group_id' => $this->group->id]);
 
@@ -87,6 +80,21 @@ class PublicSubgroupForm extends Component
         }
 
         $this->redirect(route('agenda.public-subgroups.index', $this->group), navigate: true);
+    }
+
+    public function destroyRecord(PublicAudienceCatalogDeleteService $deleter): void
+    {
+        if (! $this->publicSubgroup) {
+            return;
+        }
+
+        $this->authorize('delete', $this->publicSubgroup);
+
+        $this->handleCatalogDelete(
+            fn () => $deleter->deleteSubgroup($this->publicSubgroup),
+            route('agenda.public-subgroups.index', $this->group),
+            __('Subgrupo excluído.'),
+        );
     }
 
     public function render()

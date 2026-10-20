@@ -297,6 +297,12 @@ class EventRecurrenceService
             'needs_valet',
             'needs_other_materials',
             'other_materials_note',
+            'include_on_baptism_list',
+            'has_libras',
+            'whatsapp_enabled',
+            'whatsapp_notice_template_id',
+            'dress_code',
+            'meta',
         ]);
 
         $occ = Event::query()->create(array_merge($base, [

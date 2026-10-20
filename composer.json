@@ -6,12 +6,16 @@
     "license": "MIT",
     "require": {
         "php": "^8.1",
+        "barryvdh/laravel-dompdf": "^3.1",
         "guzzlehttp/guzzle": "^7.2",
+        "laravel-lang/common": "^6.8",
+        "laravel-lang/lang": "^14.8",
         "laravel/framework": "^10.0",
         "laravel/sanctum": "^3.2",
         "laravel/tinker": "^2.8",
         "livewire/livewire": "^3.4",
         "livewire/volt": "^1.0",
+        "phpoffice/phpword": "^1.4",
         "spatie/laravel-activitylog": "^4.12",
         "spatie/laravel-permission": "^6.25"
     },
@@ -22,7 +26,10 @@
         "laravel/sail": "^1.18",
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^7.0",
+        "phpoffice/phpspreadsheet": "^5.10",
+        "phpseclib/phpseclib": "^4.0",
         "phpunit/phpunit": "^10.0",
+        "smalot/pdfparser": "^2.13",
         "spatie/laravel-ignition": "^2.0"
     },
     "autoload": {

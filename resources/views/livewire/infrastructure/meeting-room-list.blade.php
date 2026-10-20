@@ -5,10 +5,10 @@
             <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
                 <thead class="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-600 dark:bg-slate-900 dark:text-slate-400">
                     <tr>
-                        <th class="px-4 py-3">Nome</th>
+                        <th class="px-4 py-3">{{ __('Nome') }}</th>
                         <th class="px-4 py-3">Dono</th>
                         <th class="px-4 py-3">Cap.</th>
-                        <th class="px-4 py-3 text-right">Ações</th>
+                        <th class="px-4 py-3 text-right">{{ __('Ações') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -27,7 +27,7 @@
                             <td class="px-4 py-3 text-slate-600">{{ $row->capacity ?? '—' }}</td>
                             <td class="px-4 py-3 text-right">
                                 @can('update', $row)
-                                    <a href="{{ route('infrastructure.meeting-rooms.edit', $row) }}" wire:navigate class="text-primary-600 hover:underline">Editar</a>
+                                    <a href="{{ route('infrastructure.meeting-rooms.edit', $row) }}" wire:navigate class="text-primary-600 hover:underline">{{ __('Editar') }}</a>
                                 @endcan
                             </td>
                         </tr>

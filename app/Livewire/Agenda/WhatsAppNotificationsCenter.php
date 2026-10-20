@@ -2,18 +2,18 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\Event;
 use App\Models\WhatsAppNotice;
 use App\Models\WhatsAppNoticeTemplate;
 use App\Services\OrganizationalContextService;
 use App\Services\WhatsAppNoticeService;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class WhatsAppNotificationsCenter extends Component
 {
-    use AuthorizesRequests;
+    use UsesAccountPagination;
     use WithPagination;
 
     protected $paginationTheme = 'tailwind';
@@ -21,9 +21,11 @@ class WhatsAppNotificationsCenter extends Component
     public string $search = '';
 
     public ?int $selected_event_id = null;
+
     public ?int $selected_template_id = null;
 
     public bool $show_editor = false;
+
     public string $body_final = '';
 
     public ?int $active_notice_id = null;
@@ -142,11 +144,25 @@ class WhatsAppNotificationsCenter extends Component
             $query->where('title', 'like', $s);
         }
 
-        $templates = WhatsAppNoticeTemplate::query()
+        $templatesQuery = WhatsAppNoticeTemplate::query()
             ->where('is_active', true)
             ->orderByDesc('is_default')
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+
+        if (! $user->isSuperAdmin()) {
+            $ids = $user->accessibleRegionalIds();
+            $templatesQuery->where(function ($q) use ($ids) {
+                $q->whereIn('regional_id', $ids)->orWhereNull('regional_id');
+            });
+        }
+
+        if ($rid) {
+            $templatesQuery->where(function ($q) use ($rid) {
+                $q->where('regional_id', $rid)->orWhereNull('regional_id');
+            });
+        }
+
+        $templates = $templatesQuery->get();
 
         $history = [];
         if ($this->selected_event_id) {
@@ -158,10 +174,9 @@ class WhatsAppNotificationsCenter extends Component
         }
 
         return view('livewire.agenda.whatsapp-notifications-center', [
-            'events' => $query->paginate(12),
+            'events' => $query->paginate($this->paginatePerPage()),
             'templates' => $templates,
             'history' => $history,
         ]);
     }
 }
-

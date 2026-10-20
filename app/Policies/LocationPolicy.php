@@ -19,13 +19,7 @@ class LocationPolicy
             return false;
         }
 
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
-
-        $ids = app(OrganizationalLocationService::class)->visibleLocationIdsForUser($user);
-
-        return $ids === null || in_array($location->id, $ids, true);
+        return app(OrganizationalLocationService::class)->userMayAccessLocation($user, $location);
     }
 
     public function create(User $user): bool

@@ -19,6 +19,8 @@ class RoomReservation extends Model
         'notes',
         'starts_at',
         'ends_at',
+        'setup_minutes',
+        'teardown_minutes',
         'status',
         'requires_approval',
         'requested_by_user_id',

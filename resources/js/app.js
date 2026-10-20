@@ -1,4 +1,5 @@
 import './bootstrap';
+import { registerProfilePhotoCrop } from './profile-photo-crop';
 
 function createNexusStore() {
     return {
@@ -10,12 +11,30 @@ function createNexusStore() {
             org: true,
             ops: false,
             agenda: false,
+            secretaria: false,
+            catalog: false,
+            facilitator: true,
         },
+        goChord: null,
+        goChordTimer: null,
 
         boot(hints = null) {
             this.path = String(window?.location?.pathname || '/');
-            this.theme = localStorage.getItem('nexus.theme') || 'light';
-            this.palette = localStorage.getItem('nexus.palette') || 'blue';
+
+            const storedTheme = localStorage.getItem('nexus.theme');
+            const storedPalette = localStorage.getItem('nexus.palette');
+            const accountTheme = hints?.theme;
+            const accountPalette = hints?.palette;
+
+            this.theme = accountTheme || storedTheme || 'light';
+            this.palette = accountPalette || storedPalette || 'blue';
+
+            if (accountTheme) {
+                localStorage.setItem('nexus.theme', this.theme);
+            }
+            if (accountPalette) {
+                localStorage.setItem('nexus.palette', this.palette);
+            }
 
             try {
                 const raw = localStorage.getItem('nexus.menu');
@@ -36,6 +55,12 @@ function createNexusStore() {
                 }
                 if (hints.agenda) {
                     this.menu.agenda = true;
+                }
+                if (hints.secretaria) {
+                    this.menu.secretaria = true;
+                }
+                if (hints.facilitator) {
+                    this.menu.facilitator = true;
                 }
                 localStorage.setItem('nexus.menu', JSON.stringify(this.menu));
             }
@@ -68,7 +93,6 @@ function createNexusStore() {
         syncMenuWithPath() {
             const hints = nexusHintsFromPathname(this.path);
 
-            // If user is inside a section, ensure its group is open.
             if (hints.org) {
                 this.menu.org = true;
             }
@@ -77,6 +101,15 @@ function createNexusStore() {
             }
             if (hints.agenda) {
                 this.menu.agenda = true;
+            }
+            if (hints.secretaria) {
+                this.menu.secretaria = true;
+            }
+            if (hints.catalog) {
+                this.menu.catalog = true;
+            }
+            if (hints.facilitator) {
+                this.menu.facilitator = true;
             }
         },
 
@@ -126,15 +159,22 @@ function createNexusStore() {
 
         toggleMenu(key) {
             if (!Object.prototype.hasOwnProperty.call(this.menu, key)) {
-                return;
+                this.menu[key] = false;
             }
 
             this.ensureSidebarExpandedForNavigation();
 
+            const subMenuKeys = ['catalog'];
+            const isSubMenu = subMenuKeys.includes(key);
             const next = !this.menu[key];
-            this.menu.org = false;
-            this.menu.ops = false;
-            this.menu.agenda = false;
+
+            if (!isSubMenu) {
+                this.menu.org = false;
+                this.menu.ops = false;
+                this.menu.agenda = false;
+                this.menu.secretaria = false;
+                this.menu.facilitator = false;
+            }
             this.menu[key] = next;
             localStorage.setItem('nexus.menu', JSON.stringify(this.menu));
         },
@@ -149,14 +189,141 @@ function createNexusStore() {
     };
 }
 
-// Register store when Alpine initializes (Livewire v3 provides Alpine globally).
-document.addEventListener('alpine:init', () => {
-    const Alpine = window.Alpine;
+function nexusCommandPalette(commands = []) {
+    return {
+        open: false,
+        cheatsheet: false,
+        query: '',
+        active: 0,
+        commands,
+        chord: null,
+        chordTimer: null,
+        get filtered() {
+            const q = this.query.trim().toLowerCase();
+            if (!q) return this.commands;
+            return this.commands.filter((c) => {
+                const hay = `${c.label} ${c.keywords || ''}`.toLowerCase();
+                return hay.includes(q);
+            });
+        },
+        openPalette() {
+            this.open = true;
+            this.query = '';
+            this.active = 0;
+            this.$nextTick(() => this.$refs.input?.focus());
+        },
+        close() {
+            this.open = false;
+            this.query = '';
+        },
+        move(delta) {
+            const len = this.filtered.length;
+            if (!len) return;
+            this.active = (this.active + delta + len) % len;
+        },
+        activate() {
+            const cmd = this.filtered[this.active];
+            if (!cmd?.href) return;
+            this.close();
+            if (window.Livewire?.navigate) {
+                window.Livewire.navigate(cmd.href);
+            } else {
+                window.location.href = cmd.href;
+            }
+        },
+        isTypingTarget(el) {
+            if (!el) return false;
+            const tag = (el.tagName || '').toLowerCase();
+            return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+        },
+        go(href) {
+            if (!href) return;
+            if (window.Livewire?.navigate) {
+                window.Livewire.navigate(href);
+            } else {
+                window.location.href = href;
+            }
+        },
+        resolveChord(second) {
+            const map = {
+                gd: this.commands.find((c) => c.id === 'dash')?.href,
+                ge: this.commands.find((c) => c.id === 'events')?.href,
+                gr: this.commands.find((c) => c.id === 'reservations')?.href,
+                gu: this.commands.find((c) => c.id === 'users')?.href,
+                ne: this.commands.find((c) => c.id === 'new-event')?.href,
+                nr: this.commands.find((c) => c.id === 'new-res')?.href,
+            };
+            return map[`${this.chord}${second}`] || null;
+        },
+        onGlobalKey(e) {
+            if (this.isTypingTarget(e.target) && e.key !== 'Escape') {
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                this.openPalette();
+                return;
+            }
+            if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                this.openPalette();
+                return;
+            }
+            if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                this.cheatsheet = !this.cheatsheet;
+                return;
+            }
+            if (e.key === 'Escape') {
+                this.close();
+                this.cheatsheet = false;
+                this.chord = null;
+                return;
+            }
+            const key = e.key.toLowerCase();
+            if (this.chord) {
+                const href = this.resolveChord(key);
+                this.chord = null;
+                clearTimeout(this.chordTimer);
+                if (href) {
+                    e.preventDefault();
+                    this.go(href);
+                }
+                return;
+            }
+            if (key === 'g' || key === 'n') {
+                this.chord = key;
+                clearTimeout(this.chordTimer);
+                this.chordTimer = setTimeout(() => {
+                    this.chord = null;
+                }, 900);
+            }
+        },
+    };
+}
 
-    if (Alpine && !Alpine.store('nexus')) {
+function registerNexusAlpine(Alpine) {
+    if (!Alpine) {
+        return;
+    }
+
+    if (!Alpine.store('nexus')) {
         Alpine.store('nexus', createNexusStore());
     }
+
+    Alpine.data('nexusCommandPalette', nexusCommandPalette);
+
+    registerProfilePhotoCrop(Alpine);
+}
+
+// Livewire v3 fornece Alpine; registar no alpine:init (e fallback se já existir).
+document.addEventListener('alpine:init', () => {
+    registerNexusAlpine(window.Alpine);
 });
+
+if (window.Alpine) {
+    registerNexusAlpine(window.Alpine);
+}
 
 function nexusHintsFromPathname(pathname) {
     const p = String(pathname || '/');
@@ -164,6 +331,9 @@ function nexusHintsFromPathname(pathname) {
         org: p.startsWith('/organization') || p.startsWith('/users') || p.startsWith('/access'),
         ops: p.startsWith('/infrastructure'),
         agenda: p.startsWith('/agenda') || p.startsWith('/reports'),
+        secretaria: p.startsWith('/secretaria'),
+        catalog: p.startsWith('/agenda/public-catalog'),
+        facilitator: p.startsWith('/facilitator') || p.startsWith('/access') || p.startsWith('/agenda/approvals'),
     };
 }
 

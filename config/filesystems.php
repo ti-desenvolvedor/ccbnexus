@@ -38,7 +38,9 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            // Em Hostinger (public_html/storage pasta real, sem symlink), defina:
+            // FILESYSTEM_PUBLIC_ROOT=/home/.../domains/.../public_html/storage
+            'root' => env('FILESYSTEM_PUBLIC_ROOT', storage_path('app/public')),
             'url' => env('APP_URL').'/storage',
             'visibility' => 'public',
             'throw' => false,

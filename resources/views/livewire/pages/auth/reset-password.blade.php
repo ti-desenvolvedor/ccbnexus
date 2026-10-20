@@ -1,7 +1,7 @@
 <?php
 
+use App\Support\PasswordStrength;
 use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -46,7 +46,7 @@ new #[Layout('layouts.guest')] class extends Component
             $this->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) {
                 $user->forceFill([
-                    'password' => Hash::make($this->password),
+                    ...PasswordStrength::stored($this->password),
                     'remember_token' => Str::random(60),
                 ])->save();
 
@@ -82,6 +82,7 @@ new #[Layout('layouts.guest')] class extends Component
         <div class="mt-4">
             <x-input-label for="password" :value="__('Password')" />
             <x-text-input wire:model="password" id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
+            <x-auth.password-hint />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 

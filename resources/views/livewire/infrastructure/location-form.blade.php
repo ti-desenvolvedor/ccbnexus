@@ -6,6 +6,33 @@
             @error('name') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
         </div>
 
+        <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/40">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Âmbito organizacional</p>
+            <label class="mb-3 inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" wire:model.live="is_regional_hq" class="rounded" />
+                Sede regional (sem administração)
+            </label>
+            @if ($is_regional_hq)
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">{{ __('Regional') }}</label>
+                    <x-nexus.searchable-select wire:model="regional_id" class="mt-1" empty-label="—" search-placeholder="{{ __('Buscar regional...') }}" :options="$regionals" />
+                    @error('regional_id') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
+            @else
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">{{ __('Administração') }}</label>
+                    <x-nexus.searchable-select
+                        wire:model="administration_id"
+                        class="mt-1"
+                        empty-label="—"
+                        search-placeholder="{{ __('Buscar administração...') }}"
+                        :options="$administrations->map(fn ($a) => ['value' => (string) $a->id, 'label' => $a->name.' — '.($a->regional?->name ?? '')])"
+                    />
+                    @error('administration_id') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                </div>
+            @endif
+        </div>
+
         <div>
             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">País (ISO-2)</label>
             <input type="text" wire:model.live="country" maxlength="2" class="mt-1 w-full max-w-[6rem] uppercase rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
@@ -39,36 +66,25 @@
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">UF</label>
-                    <select wire:model.live="state" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950">
-                        <option value="">— Selecione —</option>
-                        @foreach ($brazilianStates as $sigla => $nomeUf)
-                            <option value="{{ $sigla }}">{{ $sigla }} — {{ $nomeUf }}</option>
-                        @endforeach
-                    </select>
+                    <x-nexus.searchable-select
+                        wire:model.live="state"
+                        class="mt-1"
+                        empty-label="— Selecione —"
+                        search-placeholder="Buscar UF..."
+                        :options="collect($brazilianStates)->map(fn ($nomeUf, $sigla) => ['value' => $sigla, 'label' => $sigla.' — '.$nomeUf])"
+                    />
                     @error('state') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">Município</label>
-                    <select
+                    <x-nexus.searchable-select
                         wire:model="city"
-                        @disabled($state === '' || $loadingCities || count($cityOptions) === 0)
-                        class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950"
-                    >
-                        <option value="">
-                            @if ($state === '')
-                                Selecione primeiro a UF
-                            @elseif ($loadingCities)
-                                A carregar municípios…
-                            @elseif (count($cityOptions) === 0)
-                                Sem dados IBGE para esta UF
-                            @else
-                                — Selecione o município —
-                            @endif
-                        </option>
-                        @foreach ($cityOptions as $nomeMunicipio)
-                            <option value="{{ $nomeMunicipio }}">{{ $nomeMunicipio }}</option>
-                        @endforeach
-                    </select>
+                        class="mt-1"
+                        search-placeholder="Buscar município..."
+                        :disabled="$state === '' || $loadingCities || count($cityOptions) === 0"
+                        :empty-label="$state === '' ? 'Selecione primeiro a UF' : ($loadingCities ? 'A carregar municípios…' : (count($cityOptions) === 0 ? 'Sem dados IBGE para esta UF' : '— Selecione o município —'))"
+                        :options="collect($cityOptions)->map(fn ($nomeMunicipio) => ['value' => $nomeMunicipio, 'label' => $nomeMunicipio])"
+                    />
                     @error('city') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
             </div>
@@ -141,8 +157,8 @@
         @endif
 
         <div class="flex gap-2">
-            <x-ui.button type="submit">Guardar</x-ui.button>
-            <a href="{{ route('infrastructure.locations.index') }}" wire:navigate class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-800">Cancelar</a>
+            <x-ui.button type="submit">{{ __('Guardar') }}</x-ui.button>
+            <a href="{{ route('infrastructure.locations.index') }}" wire:navigate class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-800">{{ __('Cancelar') }}</a>
         </div>
     </form>
 </x-ui.card>

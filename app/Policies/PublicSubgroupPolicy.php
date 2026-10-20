@@ -15,6 +15,14 @@ class PublicSubgroupPolicy
         return $this->managesPublicAudienceCatalog($user);
     }
 
+    public function view(User $user, PublicSubgroup $publicSubgroup): bool
+    {
+        $publicSubgroup->loadMissing('group.regional');
+
+        return $this->managesPublicAudienceCatalog($user)
+            && $this->canAccessCatalogRegional($user, $publicSubgroup->group?->regional);
+    }
+
     public function create(User $user): bool
     {
         return $this->managesPublicAudienceCatalog($user);
@@ -22,11 +30,14 @@ class PublicSubgroupPolicy
 
     public function update(User $user, PublicSubgroup $publicSubgroup): bool
     {
-        return $this->managesPublicAudienceCatalog($user);
+        return $this->view($user, $publicSubgroup);
     }
 
     public function delete(User $user, PublicSubgroup $publicSubgroup): bool
     {
-        return $this->managesPublicAudienceCatalog($user);
+        $publicSubgroup->loadMissing('group.regional');
+
+        return $this->canDeletePublicAudienceCatalog($user)
+            && $this->canAccessCatalogRegional($user, $publicSubgroup->group?->regional);
     }
 }

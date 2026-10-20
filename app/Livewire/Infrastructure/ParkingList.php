@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Infrastructure;
 
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\Parking;
 use App\Services\OrganizationalLocationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -11,6 +12,7 @@ use Livewire\WithPagination;
 class ParkingList extends Component
 {
     use AuthorizesRequests;
+    use UsesAccountPagination;
     use WithPagination;
 
     protected $paginationTheme = 'tailwind';
@@ -33,7 +35,7 @@ class ParkingList extends Component
         }
 
         return view('livewire.infrastructure.parking-list', [
-            'parkings' => $q->paginate(15),
+            'parkings' => $q->paginate($this->paginatePerPage()),
         ]);
     }
 }

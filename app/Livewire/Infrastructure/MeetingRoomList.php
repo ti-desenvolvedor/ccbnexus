@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Infrastructure;
 
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\MeetingRoom;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
@@ -10,6 +11,7 @@ use Livewire\WithPagination;
 class MeetingRoomList extends Component
 {
     use AuthorizesRequests;
+    use UsesAccountPagination;
     use WithPagination;
 
     public string $search = '';
@@ -35,7 +37,7 @@ class MeetingRoomList extends Component
         }
 
         return view('livewire.infrastructure.meeting-room-list', [
-            'meetingRooms' => $query->paginate(12),
+            'meetingRooms' => $query->paginate($this->paginatePerPage()),
         ]);
     }
 }

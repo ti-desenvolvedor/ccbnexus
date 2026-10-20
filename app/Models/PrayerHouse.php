@@ -16,6 +16,7 @@ class PrayerHouse extends Model
 
     protected $fillable = [
         'administration_id',
+        'official_code',
         'location_id',
         'name',
         'slug',
@@ -48,10 +49,19 @@ class PrayerHouse extends Model
         return $this->morphMany(MeetingRoom::class, 'owner');
     }
 
+    public function getDisplayLabelAttribute(): string
+    {
+        if ($this->official_code) {
+            return "{$this->official_code} — {$this->name}";
+        }
+
+        return $this->name;
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['administration_id', 'location_id', 'name', 'slug', 'is_active'])
+            ->logOnly(['administration_id', 'official_code', 'location_id', 'name', 'slug', 'is_active'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }

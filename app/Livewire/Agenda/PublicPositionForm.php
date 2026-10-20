@@ -2,17 +2,20 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\DestroysPublicCatalogFormRecords;
 use App\Models\PublicPosition;
+use App\Services\PublicAudience\PublicAudienceCatalogDeleteService;
 use App\Services\PublicAudienceCatalogService;
+use App\Services\SlugService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class PublicPositionForm extends Component
 {
     use AuthorizesRequests;
+    use DestroysPublicCatalogFormRecords;
 
     public ?PublicPosition $position = null;
 
@@ -21,8 +24,6 @@ class PublicPositionForm extends Component
     public ?int $public_subgroup_id = null;
 
     public string $name = '';
-
-    public string $slug = '';
 
     public bool $is_active = true;
 
@@ -37,7 +38,6 @@ class PublicPositionForm extends Component
             $this->public_department_id = $this->position->public_department_id;
             $this->public_subgroup_id = $this->position->public_subgroup_id;
             $this->name = $this->position->name;
-            $this->slug = $this->position->slug;
             $this->is_active = $this->position->is_active;
             $this->sort_order = (int) $this->position->sort_order;
             $this->is_department_coordinator = (bool) $this->position->is_department_coordinator;
@@ -48,14 +48,7 @@ class PublicPositionForm extends Component
         }
     }
 
-    public function updatedName(string $value): void
-    {
-        if (! $this->position && $this->slug === '') {
-            $this->slug = Str::slug($value);
-        }
-    }
-
-    public function save(PublicAudienceCatalogService $catalog): void
+    public function save(PublicAudienceCatalogService $catalog, SlugService $slugs): void
     {
         if ($this->position) {
             $this->authorize('update', $this->position);
@@ -65,11 +58,6 @@ class PublicPositionForm extends Component
 
         $allowedDeptIds = $catalog->departmentsForUser(auth()->user())->pluck('id')->all();
 
-        $slugRule = Rule::unique('public_positions', 'slug')->where('public_department_id', $this->public_department_id);
-        if ($this->position) {
-            $slugRule->ignore($this->position->id);
-        }
-
         if ($this->public_subgroup_id === '' || $this->public_subgroup_id === 0) {
             $this->public_subgroup_id = null;
         }
@@ -78,7 +66,6 @@ class PublicPositionForm extends Component
             'public_department_id' => ['required', 'integer', Rule::in($allowedDeptIds)],
             'public_subgroup_id' => ['nullable', 'integer', 'exists:public_subgroups,id'],
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slugRule],
             'is_active' => ['boolean'],
             'sort_order' => ['integer', 'min:0', 'max:9999'],
             'is_department_coordinator' => ['boolean'],
@@ -93,6 +80,13 @@ class PublicPositionForm extends Component
             }
         }
 
+        $data['slug'] = $this->position?->slug ?? $slugs->generate(
+            $data['name'],
+            'public_positions',
+            ['public_department_id' => (int) $data['public_department_id']],
+            $this->position?->id
+        );
+
         if ($this->position) {
             $this->position->update($data);
             session()->flash('status', __('Cargo atualizado.'));
@@ -102,6 +96,21 @@ class PublicPositionForm extends Component
         }
 
         $this->redirect(route('agenda.public-positions.index'), navigate: true);
+    }
+
+    public function destroyRecord(PublicAudienceCatalogDeleteService $deleter): void
+    {
+        if (! $this->position) {
+            return;
+        }
+
+        $this->authorize('delete', $this->position);
+
+        $this->handleCatalogDelete(
+            fn () => $deleter->deletePosition($this->position),
+            route('agenda.public-positions.index'),
+            __('Cargo excluído.'),
+        );
     }
 
     public function render(PublicAudienceCatalogService $catalog)

@@ -12,12 +12,26 @@ alwaysApply: false
 - Forms: grupos por contexto (Dados do evento, Público, Papéis, Estrutura, Avisos).
 - Feedback imediato: validação inline, toasts/alerts, loading states.
 - Evitar telas densas: usar abas/accordions/steps quando necessário.
+- Erros em formulários com abas: contagem **por aba** (“N erros nesta aba”) e foco na primeira aba com erro.
+
+## Campos e componentes
+
+- Campos de escolha usam `x-nexus.searchable-select` (mostra as primeiras opções e filtra ao digitar). Não usar `<select>` nativo.
+- Empty state obrigatório em listagens: `x-nexus.empty-state` com CTA quando o utilizador pode criar.
+- Cascata Regional → Administração → Casa: limpar filhos ao mudar o pai; desabilitar até o pai ter valor.
+- Touch targets ≥ 44px; filtros empilham `flex-col` → `lg:flex-row`.
+
+## Chrome e produtividade
+
+- Contexto organizacional ativo **sempre visível** no topbar (não só Dashboard/Profile).
+- Command palette (`Ctrl+K` / `/`) é acelerador; o menu lateral permanece o caminho canónico.
+- Secção Facilitador no menu (gated `atuar_como_facilitador`) com badges de pendências quando possível.
 
 ## Padrões Livewire
 
 - Componentes pequenos e reutilizáveis; extrair subcomponentes para blocos repetidos.
 - Queries e regras de negócio não ficam no componente: chamar Service/UseCase.
-- Ações sensíveis (aprovar/cancelar/alterar): exigir justificativa e confirmar intenção.
+- Ações sensíveis (aprovar/cancelar/alterar/moderar): exigir **justificativa** e confirmar intenção.
 
 ## Avisos/Notificações (WhatsApp)
 
@@ -25,3 +39,7 @@ alwaysApply: false
 - Fornecer botões explícitos: **Copiar**, **Abrir no WhatsApp**, **Marcar como enviado**.
 - Se o evento estiver com WhatsApp desativado, a UI deve deixar claro que **não há aviso** e ocultar/neutralizar ações.
 
+## Referência
+
+- Documento: `agents/usabilidade.md`
+- Skill: `.cursor/skills/ccbnexus-ux-designer/SKILL.md`

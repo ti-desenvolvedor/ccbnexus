@@ -12,14 +12,9 @@
             <form wire:submit="save" class="grid gap-4">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div>
-                        <label class="text-xs font-semibold text-slate-500">Nome</label>
+                        <label class="text-xs font-semibold text-slate-500">{{ __('Nome') }}</label>
                         <input type="text" wire:model.live="name" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
                         @error('name') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="text-xs font-semibold text-slate-500">Slug</label>
-                        <input type="text" wire:model="slug" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
-                        @error('slug') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
                     </div>
                 </div>
                 <div>
@@ -31,7 +26,7 @@
                 <div class="flex flex-wrap gap-6">
                     <label class="inline-flex items-center gap-2 text-sm">
                         <input type="checkbox" wire:model="is_active" class="rounded" />
-                        <span>Ativo</span>
+                        <span>{{ __('Ativo') }}</span>
                     </label>
                     @can('setDefault', \App\Models\WhatsAppNoticeTemplate::class)
                         <label class="inline-flex items-center gap-2 text-sm">
@@ -42,8 +37,8 @@
                 </div>
 
                 <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <x-ui.button type="submit">Guardar</x-ui.button>
-                    <x-ui.button type="button" variant="secondary" wire:click="$set('show_form', false)">Cancelar</x-ui.button>
+                    <x-ui.button type="submit">{{ __('Guardar') }}</x-ui.button>
+                    <x-ui.button type="button" variant="secondary" wire:click="$set('show_form', false)">{{ __('Cancelar') }}</x-ui.button>
                 </div>
             </form>
         </x-ui.card>
@@ -54,10 +49,10 @@
             <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
                 <thead class="bg-slate-50 text-left text-xs font-semibold uppercase dark:bg-slate-900">
                     <tr>
-                        <th class="px-4 py-3">Nome</th>
+                        <th class="px-4 py-3">{{ __('Nome') }}</th>
                         <th class="px-4 py-3">Slug</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3 text-right">Ações</th>
+                        <th class="px-4 py-3">{{ __('Estado') }}</th>
+                        <th class="px-4 py-3 text-right">{{ __('Ações') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -73,7 +68,7 @@
                             <td class="px-4 py-3">{{ $t->is_active ? 'Ativo' : 'Inativo' }}</td>
                             <td class="px-4 py-3 text-right space-x-3">
                                 @can('update', $t)
-                                    <button type="button" wire:click="edit({{ $t->id }})" class="text-primary-600 hover:underline">Editar</button>
+                                    <button type="button" wire:click="edit({{ $t->id }})" class="text-primary-600 hover:underline">{{ __('Editar') }}</button>
                                 @endcan
                                 @can('setDefault', \App\Models\WhatsAppNoticeTemplate::class)
                                     @if (! $t->is_default)

@@ -3,12 +3,12 @@
 namespace App\Livewire\Infrastructure;
 
 use App\Models\Administration;
-use App\Models\Location;
 use App\Models\MeetingRoom;
 use App\Models\PrayerHouse;
 use App\Services\OrganizationalLocationService;
+use App\Services\SlugService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 
 class MeetingRoomForm extends Component
@@ -23,8 +23,6 @@ class MeetingRoomForm extends Component
 
     public string $name = '';
 
-    public string $slug = '';
-
     public ?int $capacity = null;
 
     public bool $is_active = true;
@@ -38,7 +36,6 @@ class MeetingRoomForm extends Component
             $this->owner_type = $this->meetingRoom->owner_type;
             $this->owner_id = (int) $this->meetingRoom->owner_id;
             $this->name = $this->meetingRoom->name;
-            $this->slug = $this->meetingRoom->slug;
             $this->capacity = $this->meetingRoom->capacity;
             $this->is_active = $this->meetingRoom->is_active;
             $this->location_id = $this->meetingRoom->location_id;
@@ -67,7 +64,22 @@ class MeetingRoomForm extends Component
         }
     }
 
-    public function save(OrganizationalLocationService $locationScope): void
+    public function updatedOwnerType(): void
+    {
+        $this->owner_id = 0;
+        $this->location_id = null;
+    }
+
+    public function updatedOwnerId(): void
+    {
+        $allowed = app(OrganizationalLocationService::class)
+            ->selectableIdsForMeetingRoomOwner($this->owner_type, $this->owner_id);
+        if ($this->location_id && ! in_array((int) $this->location_id, $allowed, true)) {
+            $this->location_id = null;
+        }
+    }
+
+    public function save(OrganizationalLocationService $locationScope, SlugService $slugs): void
     {
         if ($this->meetingRoom) {
             $this->authorize('update', $this->meetingRoom);
@@ -101,33 +113,30 @@ class MeetingRoomForm extends Component
             return;
         }
 
-        $slugRule = Rule::unique('meeting_rooms', 'slug')
-            ->where('owner_type', $this->owner_type)
-            ->where('owner_id', $this->owner_id);
-        if ($this->meetingRoom) {
-            $slugRule->ignore($this->meetingRoom->id);
-        }
-
         $data = $this->validate([
             'owner_type' => ['required', 'string', 'max:255'],
             'owner_id' => ['required', 'integer'],
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slugRule],
             'capacity' => ['nullable', 'integer', 'min:1', 'max:100000'],
             'is_active' => ['boolean'],
             'location_id' => ['nullable', 'exists:locations,id'],
         ]);
 
-        if (! $user->isSuperAdmin() && ($data['location_id'] ?? null)) {
-            $allowed = $locationScope->mergeCurrentLocation(
-                $locationScope->selectableIdsForMeetingRoomOwner($data['owner_type'], (int) $data['owner_id']),
-                $this->meetingRoom?->location_id
-            );
-            if (! in_array((int) $data['location_id'], $allowed, true)) {
-                $this->addError('location_id', __('Este local não pertence ao dono desta sala.'));
+        $data['slug'] = $this->meetingRoom?->slug ?? $slugs->generate(
+            $data['name'],
+            'meeting_rooms',
+            ['owner_type' => $data['owner_type'], 'owner_id' => (int) $data['owner_id']],
+            $this->meetingRoom?->id
+        );
 
-                return;
-            }
+        $allowed = $locationScope->mergeCurrentLocation(
+            $locationScope->selectableIdsForMeetingRoomOwner($data['owner_type'], (int) $data['owner_id']),
+            $this->meetingRoom?->location_id
+        );
+        if (($data['location_id'] ?? null) && ! in_array((int) $data['location_id'], $allowed, true)) {
+            $this->addError('location_id', __('Este local não pertence ao dono desta sala.'));
+
+            return;
         }
 
         if ($this->meetingRoom) {
@@ -139,6 +148,20 @@ class MeetingRoomForm extends Component
         }
 
         $this->redirect(route('infrastructure.meeting-rooms.index'), navigate: true);
+    }
+
+    protected function locationOptions(OrganizationalLocationService $locationScope): Collection
+    {
+        if ($this->owner_id <= 0) {
+            return collect();
+        }
+
+        $ids = $locationScope->mergeCurrentLocation(
+            $locationScope->selectableIdsForMeetingRoomOwner($this->owner_type, $this->owner_id),
+            $this->location_id
+        );
+
+        return $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
     }
 
     public function render(OrganizationalLocationService $locationScope)
@@ -157,18 +180,10 @@ class MeetingRoomForm extends Component
             ->limit(400)
             ->get();
 
-        if ($user->isSuperAdmin()) {
-            $locations = Location::query()->orderBy('name')->limit(500)->get();
-        } else {
-            $allowed = $locationScope->selectableIdsForMeetingRoomOwner($this->owner_type, $this->owner_id);
-            $ids = $locationScope->mergeCurrentLocation($allowed, $this->location_id);
-            $locations = $locationScope->orderedLocationsQuery($ids)->limit(500)->get();
-        }
-
         return view('livewire.infrastructure.meeting-room-form', [
             'administrations' => $administrations,
             'prayerHouses' => $prayerHouses,
-            'locations' => $locations,
+            'locations' => $this->locationOptions($locationScope),
         ]);
     }
 }

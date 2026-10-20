@@ -30,6 +30,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Avisos / relatórios
             'gerenciar_avisos',
+            'excluir_catalogo_publico',
             'visualizar_relatorios',
 
             // Organização / infraestrutura (domínio CCB Nexus)
@@ -107,6 +108,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'visualizar_relatorios',
                 'aprovar_reserva_sala',
                 'gerenciar_avisos',
+                'excluir_catalogo_publico',
             ],
         ];
 

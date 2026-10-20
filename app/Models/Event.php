@@ -28,6 +28,8 @@ class Event extends Model
         'attendance_mode',
         'dress_code',
         'whatsapp_enabled',
+        'include_on_baptism_list',
+        'has_libras',
         'whatsapp_notice_template_id',
         'expected_attendees',
         'needs_sound_controller',
@@ -64,6 +66,8 @@ class Event extends Model
         'cancelled_at' => 'datetime',
         'meta' => 'array',
         'whatsapp_enabled' => 'boolean',
+        'include_on_baptism_list' => 'boolean',
+        'has_libras' => 'boolean',
         'needs_sound_controller' => 'boolean',
         'needs_av' => 'boolean',
         'needs_parking' => 'boolean',
@@ -134,6 +138,91 @@ class Event extends Model
     public function roleAssignments(): HasMany
     {
         return $this->hasMany(EventRoleAssignment::class);
+    }
+
+    public function whatsappGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            WhatsAppGroup::class,
+            'event_whatsapp_group',
+            'event_id',
+            'whatsapp_group_id'
+        )->withTimestamps();
+    }
+
+    public function attendantLabel(): ?string
+    {
+        $assignment = $this->roleAssignments
+            ->first(fn (EventRoleAssignment $a) => $a->roleTemplate?->slug === 'atende')
+            ?? $this->roleAssignments->first();
+
+        if (! $assignment) {
+            return null;
+        }
+
+        return $assignment->assignee_label ?: $assignment->user?->name;
+    }
+
+    public function effectiveStatus(): string
+    {
+        if (in_array($this->status, ['cancelled', 'rejected'], true)) {
+            return $this->status;
+        }
+
+        if ($this->parent_event_id) {
+            return $this->parent?->status ?? $this->status;
+        }
+
+        return (string) $this->status;
+    }
+
+    public function agendaEditId(): int
+    {
+        return ($this->is_occurrence && $this->parent_event_id) ? (int) $this->parent_event_id : (int) $this->id;
+    }
+
+    public function effectiveStatusLabel(): string
+    {
+        return match ($this->effectiveStatus()) {
+            'draft' => 'Rascunho',
+            'pending_approval' => 'Pendente',
+            'published' => 'Publicado',
+            'cancelled' => 'Cancelado',
+            'rejected' => 'Rejeitado',
+            default => 'Rascunho',
+        };
+    }
+
+    public function effectiveStatusTone(): string
+    {
+        return match ($this->effectiveStatus()) {
+            'published' => 'success',
+            'pending_approval' => 'warning',
+            'cancelled', 'rejected' => 'danger',
+            default => 'neutral',
+        };
+    }
+
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            'draft' => 'Rascunho',
+            'pending_approval' => 'Pendente',
+            'published' => 'Publicado',
+            'cancelled' => 'Cancelado',
+            'rejected' => 'Rejeitado',
+            default => 'Rascunho',
+        };
+    }
+
+    public function statusTone(): string
+    {
+        return match ($this->status) {
+            'published' => 'success',
+            'pending_approval' => 'warning',
+            'cancelled', 'rejected' => 'danger',
+            default => 'neutral',
+        };
     }
 
     public function notificationDispatches(): HasMany

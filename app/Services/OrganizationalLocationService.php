@@ -3,172 +3,104 @@
 namespace App\Services;
 
 use App\Models\Administration;
-use App\Models\Event;
 use App\Models\Location;
-use App\Models\MeetingRoom;
-use App\Models\Parking;
 use App\Models\PrayerHouse;
 use App\Models\Regional;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\ValidationException;
 
 /**
- * Garante que "locais" (tabela locations) só aparecem no contexto organizacional correto:
- * endereço de uma casa de oração não deve surgir ao editar outra administração, etc.
+ * Escopo de locais (tabela locations) por administração/regional.
  */
 class OrganizationalLocationService
 {
     /**
+     * Locais ainda sem dono explícito (criação de regional/administração).
+     *
      * @return list<int>
      */
-    public function referencedLocationIds(): array
+    public function selectableIdsForNewRegional(): array
     {
-        return collect()
-            ->merge(Regional::query()->whereNotNull('location_id')->pluck('location_id'))
-            ->merge(Administration::query()->whereNotNull('location_id')->pluck('location_id'))
-            ->merge(PrayerHouse::query()->whereNotNull('location_id')->pluck('location_id'))
-            ->merge(MeetingRoom::query()->whereNotNull('location_id')->pluck('location_id'))
-            ->merge(Event::query()->whereNotNull('location_id')->pluck('location_id'))
-            ->merge(Parking::query()->pluck('location_id'))
-            ->unique()
-            ->filter()
-            ->values()
+        return Location::query()
+            ->whereNull('regional_id')
+            ->whereNull('administration_id')
+            ->pluck('id')
             ->all();
     }
 
     /**
-     * Locais ainda não ligados a regional, administração, casa, sala, evento ou estacionamento.
+     * Catálogo de locais de uma administração (sem sede regional no dropdown de casa/sala).
      *
      * @return list<int>
      */
-    public function orphanLocationIds(): array
+    public function selectableIdsForAdministration(int $administrationId): array
     {
-        $referenced = $this->referencedLocationIds();
-        if ($referenced === []) {
-            return Location::query()->pluck('id')->all();
+        if ($administrationId <= 0) {
+            return [];
         }
 
-        return Location::query()->whereNotIn('id', $referenced)->pluck('id')->all();
+        return Location::query()
+            ->where('administration_id', $administrationId)
+            ->pluck('id')
+            ->all();
     }
 
     /**
-     * Ao criar uma nova administração: sede regional + locais ainda sem vínculo (novo endereço).
+     * Pool ao criar nova administração: sede regional + locais regionais sem administração.
      *
      * @return list<int>
      */
     public function selectableIdsForNewAdministration(int $regionalId): array
     {
         $ids = collect();
+
         $regional = Regional::query()->find($regionalId);
         if ($regional?->location_id) {
             $ids->push((int) $regional->location_id);
         }
 
-        return $ids->merge($this->orphanLocationIds())->unique()->values()->all();
-    }
-
-    /**
-     * Locais que uma administração pode usar: sede regional + endereço da própria administração
-     * + endereços das casas de oração desta administração (não de outras).
-     *
-     * @return list<int>
-     */
-    public function selectableIdsForAdministration(int $administrationId): array
-    {
-        $admin = Administration::query()->find($administrationId);
-        if (! $admin) {
-            return [];
-        }
-
-        $ids = collect();
-        $regional = Regional::query()->find($admin->regional_id);
-        if ($regional?->location_id) {
-            $ids->push((int) $regional->location_id);
-        }
-        if ($admin->location_id) {
-            $ids->push((int) $admin->location_id);
-        }
         $ids = $ids->merge(
-            PrayerHouse::query()
-                ->where('administration_id', $administrationId)
-                ->whereNotNull('location_id')
-                ->pluck('location_id')
+            Location::query()
+                ->where('regional_id', $regionalId)
+                ->whereNull('administration_id')
+                ->pluck('id')
         );
 
         return $ids->unique()->filter()->values()->all();
     }
 
     /**
-     * Casas de oração partilham o mesmo conjunto que a administração-mãe (regional + admin + casas da mesma admin).
-     *
-     * @return list<int>
-     */
-    public function selectableIdsForPrayerHouse(int $prayerHouseId): array
-    {
-        $house = PrayerHouse::query()->find($prayerHouseId);
-
-        return $house
-            ? $this->selectableIdsForAdministration((int) $house->administration_id)
-            : [];
-    }
-
-    /**
-     * Tudo o que está ligado à árvore da regional (eventos, salas, etc.).
+     * Todos os locais visíveis no âmbito de uma regional (eventos, listagem ampla).
      *
      * @return list<int>
      */
     public function selectableIdsForRegional(int $regionalId): array
     {
-        $ids = collect();
-        $regional = Regional::query()->find($regionalId);
-        if ($regional?->location_id) {
-            $ids->push((int) $regional->location_id);
+        if ($regionalId <= 0) {
+            return [];
         }
 
         $adminIds = Administration::query()->where('regional_id', $regionalId)->pluck('id');
 
-        $ids = $ids->merge(
-            Administration::query()
-                ->where('regional_id', $regionalId)
-                ->whereNotNull('location_id')
-                ->pluck('location_id')
-        );
-
-        $ids = $ids->merge(
-            PrayerHouse::query()
-                ->whereIn('administration_id', $adminIds)
-                ->whereNotNull('location_id')
-                ->pluck('location_id')
-        );
-
-        $ids = $ids->merge(
-            MeetingRoom::query()
-                ->where(function ($q) use ($regionalId) {
-                    $q->whereHasMorph('owner', [Administration::class], function ($a) use ($regionalId) {
-                        $a->where('regional_id', $regionalId);
-                    })->orWhereHasMorph('owner', [PrayerHouse::class], function ($ph) use ($regionalId) {
-                        $ph->whereHas('administration', function ($a) use ($regionalId) {
-                            $a->where('regional_id', $regionalId);
-                        });
-                    });
-                })
-                ->whereNotNull('location_id')
-                ->pluck('location_id')
-        );
-
-        $ids = $ids->merge(
-            Event::query()
-                ->where('regional_id', $regionalId)
-                ->whereNotNull('location_id')
-                ->pluck('location_id')
-        );
-
-        return $ids->unique()->filter()->values()->all();
+        return Location::query()
+            ->where(function (Builder $q) use ($regionalId, $adminIds) {
+                $q->where('regional_id', $regionalId)
+                    ->orWhereIn('administration_id', $adminIds);
+            })
+            ->pluck('id')
+            ->all();
     }
 
-    /**
-     * @return list<int>
-     */
+    public function selectableIdsForPrayerHouse(int $prayerHouseId): array
+    {
+        $house = PrayerHouse::query()->find($prayerHouseId);
+
+        return $house
+          ? $this->selectableIdsForAdministration((int) $house->administration_id)
+          : [];
+    }
+
     public function selectableIdsForMeetingRoomOwner(string $ownerType, int $ownerId): array
     {
         if ($ownerType === Administration::class) {
@@ -182,8 +114,7 @@ class OrganizationalLocationService
     }
 
     /**
-     * Locais que o utilizador pode ver na lista global de "Locais" e em estacionamentos.
-     * null = sem filtro (super-admin).
+     * IDs de locais que o utilizador pode ver (null = super-admin sem filtro na listagem global).
      *
      * @return list<int>|null
      */
@@ -201,12 +132,34 @@ class OrganizationalLocationService
         return $ids->unique()->filter()->values()->all();
     }
 
+    public function userMayAccessLocation(User $user, Location $location): bool
+    {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($location->administration_id) {
+            $admin = $location->administration;
+            if ($admin && $user->canAccessAdministration($admin)) {
+                return true;
+            }
+        }
+
+        if ($location->regional_id) {
+            return in_array((int) $location->regional_id, $user->accessibleRegionalIds(), true);
+        }
+
+        $visible = $this->visibleLocationIdsForUser($user);
+
+        return is_array($visible) && in_array($location->id, $visible, true);
+    }
+
     /**
-     * @param  list<int>|null  $ids  null = todos
+     * @param  list<int>|null  $ids
      */
     public function orderedLocationsQuery(?array $ids): Builder
     {
-        $q = Location::query()->orderBy('name');
+        $q = Location::query()->with(['administration.regional', 'regional'])->orderBy('name');
         if ($ids !== null) {
             if ($ids === []) {
                 $q->whereRaw('0 = 1');
@@ -229,5 +182,18 @@ class OrganizationalLocationService
         }
 
         return collect($allowed)->push($currentId)->unique()->values()->all();
+    }
+
+    public function assertLocationAllowed(?int $locationId, array $allowedIds, string $field = 'location_id'): void
+    {
+        if ($locationId === null || $locationId === 0) {
+            return;
+        }
+
+        if (! in_array($locationId, $allowedIds, true)) {
+            throw ValidationException::withMessages([
+                $field => [__('Este local não pertence ao âmbito selecionado.')],
+            ]);
+        }
     }
 }

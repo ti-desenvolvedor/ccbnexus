@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Regional;
 use App\Models\User;
+use App\Support\PasswordStrength;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -24,7 +25,8 @@ class DevAdminUserSeeder extends Seeder
             return;
         }
 
-        $regional = Regional::query()->where('slug', 'ccb-demo')->first();
+        $regional = Regional::query()->where('slug', 'embu-das-artes')->first()
+            ?? Regional::query()->where('slug', 'ccb-demo')->first();
 
         $user = User::query()->where('email', $email)->first();
         $resetPassword = (bool) config('nexus.reset_admin_password', false);
@@ -33,25 +35,31 @@ class DevAdminUserSeeder extends Seeder
             $user = User::query()->create([
                 'email' => $email,
                 'name' => 'Thomas Gonçalves',
-                'password' => Hash::make($password),
+                ...PasswordStrength::stored($password),
                 'email_verified_at' => now(),
-                'is_super_admin' => true,
                 'regional_id' => $regional?->id,
             ]);
+            $user->forceFill(['is_super_admin' => true])->save();
         } else {
             $payload = [
                 'name' => 'Thomas Gonçalves',
                 'email_verified_at' => $user->email_verified_at ?? now(),
-                'is_super_admin' => true,
                 'regional_id' => $regional?->id,
             ];
 
-            // Só regrava password quando pedido explicitamente (evita sobrescrever mudança manual).
-            if ($resetPassword) {
-                $payload['password'] = Hash::make($password);
+            if ($resetPassword && ! Hash::check($password, (string) $user->password)) {
+                $payload = array_merge($payload, PasswordStrength::stored($password));
+                $this->command?->warn('RESET_ADMIN_PASSWORD=true: senha do admin reaplicada a partir de INITIAL_ADMIN_PASSWORD.');
+            } elseif (Hash::check($password, (string) $user->password)) {
+                $payload['password_strength'] = PasswordStrength::level($password);
             }
 
-            $user->update($payload);
+            // Query builder: não dispara activity log / eventos que invalidam sessão à toa.
+            User::query()->whereKey($user->id)->update(array_merge($payload, [
+                'is_super_admin' => true,
+                'updated_at' => now(),
+            ]));
+            $user->refresh();
         }
 
         $role = Role::query()->where('name', 'Administrador')->where('guard_name', 'web')->first();

@@ -6,9 +6,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class PublicDepartment extends Model
 {
+    use LogsActivity;
+
     public const SCOPE_REGIONAL = 'regional';
 
     public const SCOPE_ADMINISTRATION = 'administration';
@@ -22,6 +26,7 @@ class PublicDepartment extends Model
         'regional_id',
         'administration_id',
         'prayer_house_id',
+        'public_subgroup_id',
         'name',
         'slug',
         'is_active',
@@ -47,6 +52,11 @@ class PublicDepartment extends Model
     public function prayerHouse(): BelongsTo
     {
         return $this->belongsTo(PrayerHouse::class);
+    }
+
+    public function subgroup(): BelongsTo
+    {
+        return $this->belongsTo(PublicSubgroup::class, 'public_subgroup_id');
     }
 
     public function positions(): HasMany
@@ -83,5 +93,16 @@ class PublicDepartment extends Model
             self::SCOPE_PRAYER_HOUSE => $this->prayerHouse?->administration?->regional_id,
             default => null,
         };
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'scope', 'regional_id', 'administration_id', 'prayer_house_id',
+                'public_subgroup_id', 'name', 'slug', 'is_active', 'sort_order',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 }

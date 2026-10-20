@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('nexus:event-reminders')->dailyAt('07:00');
+        $schedule->command('nexus:sync-holidays')->monthlyOn(1, '06:15');
     }
 
     /**

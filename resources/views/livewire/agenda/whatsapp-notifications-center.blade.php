@@ -1,7 +1,7 @@
 <div class="space-y-4">
     <div class="flex flex-wrap items-center gap-2">
         <input type="search" wire:model.live.debounce.300ms="search" placeholder="Pesquisar eventos…" class="w-full max-w-md rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
-        <a href="{{ route('agenda.events.index') }}" wire:navigate class="text-sm font-semibold text-primary-600 hover:underline">Voltar</a>
+        <a href="{{ route('agenda.events.index') }}" wire:navigate class="text-sm font-semibold text-primary-600 hover:underline">{{ __('Voltar') }}</a>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-2">
@@ -12,7 +12,7 @@
                         <tr>
                             <th class="px-4 py-3">Evento</th>
                             <th class="px-4 py-3">Início</th>
-                            <th class="px-4 py-3 text-right">Ações</th>
+                            <th class="px-4 py-3 text-right">{{ __('Ações') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -52,12 +52,7 @@
                 @if ($show_editor)
                     <div>
                         <label class="text-xs font-semibold text-slate-500">Template</label>
-                        <select wire:model="selected_template_id" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950">
-                            <option value="">—</option>
-                            @foreach ($templates as $tpl)
-                                <option value="{{ $tpl->id }}">{{ $tpl->name }}</option>
-                            @endforeach
-                        </select>
+                        <x-nexus.searchable-select wire:model="selected_template_id" class="mt-1" empty-label="—" search-placeholder="Buscar modelo..." :options="$templates" />
                         @error('selected_template_id')
                             <p class="text-xs text-rose-600">{{ $message }}</p>
                         @enderror

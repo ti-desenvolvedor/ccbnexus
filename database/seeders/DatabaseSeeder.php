@@ -15,9 +15,13 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             CcbReferenceDataSeeder::class,
+            EventTypeAudiencePresetSeeder::class,
             MinimalOrganizationSeeder::class,
+            ItapecericaDaSerraPrayerHousesSeeder::class,
             PublicAudienceTaxonomySeeder::class,
             DevAdminUserSeeder::class,
+            RegionalEmbuArtesAgenda2026Seeder::class,
+            EmbuMinistryServantsSeeder::class,
         ]);
     }
 }

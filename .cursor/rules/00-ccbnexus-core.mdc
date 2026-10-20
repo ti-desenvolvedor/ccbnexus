@@ -15,13 +15,13 @@ alwaysApply: true
 
 ## Fluxo obrigatório de entrega (sempre nesta ordem)
 
-1. Orquestrador (quebra tarefas, define ordem, delega) — **não gera código**
-2. Arquiteto (estrutura, boundaries, models/services/relacionamentos)
-3. UX/UI (telas, usabilidade, agrupamento de campos)
-4. Backend (migrations/models/services/regras/validações) — **sem lógica em controllers**
-5. Frontend (Livewire components/views e integração)
-6. Reviewer (padrões, arquitetura, edge cases)
-7. DevOps (quando necessário: redis/queues/cache/performance)
+1. Gerente de projetos (quebra, aceite, delega) — **não gera código**
+2. Backend (schema, services, policies, boundaries) — **sem lógica em controllers**
+3. Frontend (Livewire/Tailwind; mantém o especialista de usabilidade)
+4. SQL performance (quando há lista, filtro ou relatório)
+5. Security (escopo, authz, auditoria, segredos)
+6. QA (aceite e regressão)
+7. DevOps (quando necessário: redis/queues/cache/deploy)
 
 ## Regras gerais
 

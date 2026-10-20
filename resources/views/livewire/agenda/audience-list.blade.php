@@ -1,11 +1,12 @@
-<x-ui.card title="Públicos (audiências)">
+<x-ui.card title="{{ __('Públicos (audiências legado)') }}">
+    @include('livewire.agenda.partials.public-catalog-delete-error')
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
             <thead class="bg-slate-50 text-left text-xs font-semibold uppercase dark:bg-slate-900">
                 <tr>
-                    <th class="px-3 py-2">Nome</th>
+                    <th class="px-3 py-2">{{ __('Nome') }}</th>
                     <th class="px-3 py-2">Slug</th>
-                    <th class="px-3 py-2 text-right">Ações</th>
+                    <th class="px-3 py-2 text-right">{{ __('Ações') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -15,7 +16,15 @@
                         <td class="px-3 py-2 text-slate-600">{{ $a->slug }}</td>
                         <td class="px-3 py-2 text-right">
                             @can('update', $a)
-                                <a href="{{ route('agenda.audiences.edit', $a) }}" wire:navigate class="text-primary-600 hover:underline">Editar</a>
+                                <a href="{{ route('agenda.audiences.edit', $a) }}" wire:navigate class="text-primary-600 hover:underline">{{ __('Editar') }}</a>
+                            @endcan
+                            @can('delete', $a)
+                                <button
+                                    type="button"
+                                    wire:click="deleteAudience({{ $a->id }})"
+                                    wire:confirm="{{ __('Excluir esta audiência permanentemente?') }}"
+                                    class="text-rose-600 hover:underline"
+                                >{{ __('Excluir') }}</button>
                             @endcan
                         </td>
                     </tr>

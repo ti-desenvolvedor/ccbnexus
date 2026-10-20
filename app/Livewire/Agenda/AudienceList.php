@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\DeletesPublicCatalogItems;
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\Audience;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
@@ -10,6 +12,8 @@ use Livewire\WithPagination;
 class AudienceList extends Component
 {
     use AuthorizesRequests;
+    use DeletesPublicCatalogItems;
+    use UsesAccountPagination;
     use WithPagination;
 
     protected $paginationTheme = 'tailwind';
@@ -19,7 +23,7 @@ class AudienceList extends Component
         $this->authorize('viewAny', Audience::class);
 
         return view('livewire.agenda.audience-list', [
-            'audiences' => Audience::query()->orderBy('sort_order')->paginate(20),
+            'audiences' => Audience::query()->orderBy('sort_order')->paginate($this->paginatePerPage()),
         ]);
     }
 }

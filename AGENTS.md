@@ -4,13 +4,13 @@ Este projeto usa um fluxo fixo de “papéis” para guiar a implementação com
 
 ### Fluxo obrigatório (sempre)
 
-1. **Orquestrador**: quebra tarefas grandes, define ordem, delega e cria checklist de revisão. **Não gera código.**
-2. **Arquiteto**: define estrutura, boundaries, models/services e relacionamentos visando baixo acoplamento.
-3. **UX/UI Designer**: define layout, telas e usabilidade; agrupa campos e melhora o fluxo.
-4. **Backend**: implementa em Laravel (migrations/models/services/validações). **Sem regra de negócio em controllers.**
-5. **Frontend**: implementa UI com Livewire/Tailwind e integra com backend.
-6. **Reviewer**: revisa arquitetura, padrões, segurança, edge cases e consistência.
-7. **DevOps** (quando necessário): redis/queues/cache/performance/observabilidade.
+1. **Gerente de projetos**: quebra a entrega, define aceite, delega e só fecha a fatia com o checklist verde. **Não gera código.** (O nome antigo Orquestrador é este papel.)
+2. **Backend**: schema, services, policies e validações. Boundaries e relacionamentos ficam aqui. **Sem regra de negócio em controllers.**
+3. **Frontend**: implementa UI Livewire/Tailwind e **mantém** o especialista de usabilidade (`agents/usabilidade.md`).
+4. **SQL performance** (quando há lista, filtro, agenda ou relatório): índices, N+1, plano de query.
+5. **Security**: escopo multi-regional, authz, auditoria, segredos.
+6. **QA**: testes de aceite e regressão.
+7. **DevOps** (quando há fila, cache, scheduler ou deploy): Redis, build, FTP/SSH.
 
 ### Stack e padrões
 
@@ -26,14 +26,16 @@ Este projeto usa um fluxo fixo de “papéis” para guiar a implementação com
   - **Administração** (subdivisão dentro da regional)
   - **Casa de oração** (pertence a uma administração)
 - Infraestrutura física e logística:
-  - **Endereços** (cadastro próprio) para **Administração** e **Casa de oração**
+  - **Locais** (`locations`): endereço reutilizável com **dono explícito** — `administration_id` (catálogo da administração) ou `regional_id` (sede regional). Ao cadastrar casa de oração, sala ou evento, os selects de local listam **somente** locais da administração/regional em contexto (sem vazamento entre Itapecerica, Embu, etc.).
+  - **Endereços** morph (`addresses`) — legado/complementar; preferir `locations` nos formulários atuais
   - **Salas de reunião** podem pertencer a:
     - **Casa de oração**, ou
     - **Administração**
   - **Reservas de salas** (conflitos de agenda, cancelamento, histórico; aprovação quando necessário)
 - Agenda / Eventos / Modelos / **Públicos** (taxonomia hierárquica — ver secção dedicada abaixo) / Papéis de evento / Estrutura
 - Avisos automáticos e regras editáveis
-- Aprovações, Auditoria, Relatórios, Secretari
+- Aprovações, Auditoria, Relatórios
+- **Secretaria — Lista de Batismos e Diversos** (boletim PDF, Rn, canais boletim/WA), Relatório de Marcações (M+2/M+3), avisos/alterações/coletas, grupos WhatsApp — ver `docs/ADR_LISTA_BATISMOS_E_AGENDA.md`; agenda anual Excel = `docs/AGD_01_AGENDA_ANUAL_EXCEL.md`
 
 ### Regras de domínio importantes (multi-regional + permissões)
 
@@ -45,7 +47,8 @@ Este projeto usa um fluxo fixo de “papéis” para guiar a implementação com
   - **Moderador**: pode intervir em conteúdo/configurações sensíveis (ex.: regras de avisos, publicações/comunicações, casos de conflito em reservas), sempre com **justificativa** e **auditoria**.
   - Esses papéis devem existir como **capacidades explícitas** (permissões) e podem ser atribuídos por **escopo** (regional/administração/casa), sem “superpoder” global acidental.
 - **Reservas**: impedir sobreposição de horários na mesma sala; registrar **auditoria** (quem/quando/o quê) e suportar fluxo de **aprovação** quando aplicável.
-- **Endereços**: cadastro completo e consistente para **Administração** e **Casa de oração** (normalização de campos; geolocalização opcional no futuro).
+- **Locais (endereços)**: cada registo em `locations` pertence a uma **administração** (obrigatório no cadastro normal) ou à **sede regional** (`regional_id`, sem administração). Filtros em listagens e formulários respeitam o escopo; super-admin também filtra pela administração/regional selecionada no formulário.
+- **Slugs**: gerados automaticamente via `SlugService` a partir do nome (sem campo na UI); mantidos na edição para estabilidade de referências.
 - **Salas**: sempre vinculadas a um “dono” explícito (**Administração** ou **Casa de oração**) para que permissões, reservas e relatórios respeitem o **escopo correto**.
 
 ### Públicos, grupos, departamentos e cargos (domínio ampliado)
@@ -95,7 +98,51 @@ O cadastro plano de “público” (`Audience` com nome/slug apenas) é **insufi
 4. Atualização da aba **Público** no evento para pivôs com grupo/subgrupo/cargo.  
 5. Fase posterior: **pessoas** e matrículas N:N.
 
+### Agentes e skills do projeto
+
+| Papel | Documento / skill |
+|---|---|
+| Gerente de projetos | [`agents/gerente-projetos.md`](agents/gerente-projetos.md) · skill `.cursor/skills/ccbnexus-gerente` · regra `.cursor/rules/01-orchestrator.mdc` |
+| Frontend (mantém usabilidade) | [`agents/frontend.md`](agents/frontend.md) · [`agents/usabilidade.md`](agents/usabilidade.md) · skills `ccbnexus-frontend` e `ccbnexus-ux-designer` |
+| Backend | [`agents/backend.md`](agents/backend.md) · skill `.cursor/skills/ccbnexus-backend` |
+| QA | [`agents/qa.md`](agents/qa.md) · skill `.cursor/skills/ccbnexus-qa` |
+| Security | [`agents/security.md`](agents/security.md) · skill `.cursor/skills/ccbnexus-security` |
+| SQL performance | [`agents/sql-performance.md`](agents/sql-performance.md) · skill `.cursor/skills/ccbnexus-sql-performance` |
+| DevOps | [`agents/devops.md`](agents/devops.md) · skill `.cursor/skills/ccbnexus-devops` |
+| Escopo mestre | [`docs/CCB_NEXUS_SCOPE.md`](docs/CCB_NEXUS_SCOPE.md) |
+
+**Backlog vivo (prioridade):**
+
+| Estado | Item |
+|---|---|
+| Feito | Time de agentes (gerente, front, back, QA, security, SQL, devops); register off; aprovações server-side; race/lock reservas; roles sem elevação; deploy sem `.env` real |
+| Feito | Menu Facilitador, contexto no chrome, Ctrl+K, empty states, calendário salas, setup/teardown, pedido com regional |
+| Feito | Policies com escopo (Parking/catálogo/WhatsApp/Approvals); middleware `can:`; throttle; status sem env em prod |
+| Feito | Docs `DEPRECATE_AUDIENCES.md` + `RBAC_SCOPED_DESIGN.md` |
+| Próximo | Implementar RBAC escopado após PO; remover CRUD audiences legado; módulo Avisos; pessoas N:N |
+
+### Impeccable (UI)
+
+Usar em trabalho de **frontend**: desenhar, criticar, polir ou ajustar telas Livewire (hierarquia, layout, copy, estados, acessibilidade). Não usar em tarefas só de backend.
+
+- **Entrada:** `C:\Users\tgoncalves\.cursor\skills\impeccable\SKILL.md`. Ler a skill e o reference do comando pedido (`shape`, `critique`, `polish`, etc.) e seguir esse playbook; não o copiar para aqui.
+- **Passos:** correr o contexto uma vez na sessão (`scripts\impeccable.cmd context --target <ficheiro ou rota>`, cwd no projeto); carregar o reference do comando; antes de editar UI, ler `reference/craft-floor.md`.
+- **CSS deste projeto:** o CSS de produção é o build Vite em `public/build`. Classes Tailwind novas **não** aplicam até `npm run build`. Preferir utilitários que já existem no CSS compilado.
+
+### Dual-agent (critique)
+
+Correr em `/impeccable critique` de uma superfície concreta (ficheiro ou URL), antes de um redesign ou depois de uma mudança de UI visível. Não substitui **Security** nem **QA**. Procedimento: `reference/critique.md`.
+
+Dois subagentes **isolados e em paralelo** (nenhum vê o output do outro); o pai só sintetiza no fim:
+
+1. **Assessment A (design review):** especificidade, hierarquia, heurísticas, carga cognitiva, jornada.
+2. **Assessment B (detector + browser):** `impeccable detect` e evidência visual no browser.
+
+O relatório abre com `Method: dual-agent`. Sem ferramenta de subagente, o fluxo é sequencial e o relatório tem de começar com o banner `DEGRADED`. A pergunta ao utilizador é a última linha.
+
 ### Comando inicial recomendado
+
+> “Atue como Gerente de projetos CCB Nexus e decomponha a próxima fatia do backlog”
 
 > “Crie o módulo de autenticação completo seguindo o padrão definido”
 

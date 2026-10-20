@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -24,6 +25,11 @@ class EventType extends Model
         'is_active' => 'boolean',
         'meta' => 'array',
     ];
+
+    public function audiencePreset(): HasOne
+    {
+        return $this->hasOne(EventTypeAudiencePreset::class);
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

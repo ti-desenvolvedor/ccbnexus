@@ -4,26 +4,29 @@ namespace App\Policies;
 
 use App\Models\Audience;
 use App\Models\User;
+use App\Policies\Concerns\ManagesPublicAudienceCatalog;
 
 class AudiencePolicy
 {
+    use ManagesPublicAudienceCatalog;
+
     public function viewAny(User $user): bool
     {
-        return $user->isSuperAdmin() || $user->can('gerenciar_avisos');
+        return $this->managesPublicAudienceCatalog($user);
     }
 
     public function create(User $user): bool
     {
-        return $this->viewAny($user);
+        return $this->managesPublicAudienceCatalog($user);
     }
 
     public function update(User $user, Audience $audience): bool
     {
-        return $this->viewAny($user);
+        return $this->managesPublicAudienceCatalog($user);
     }
 
     public function delete(User $user, Audience $audience): bool
     {
-        return $this->viewAny($user);
+        return $this->canDeletePublicAudienceCatalog($user);
     }
 }

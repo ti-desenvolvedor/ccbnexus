@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -14,6 +15,8 @@ class Location extends Model
     use LogsActivity;
 
     protected $fillable = [
+        'administration_id',
+        'regional_id',
         'name',
         'line1',
         'number',
@@ -29,6 +32,16 @@ class Location extends Model
     protected $casts = [
         'meta' => 'array',
     ];
+
+    public function administration(): BelongsTo
+    {
+        return $this->belongsTo(Administration::class);
+    }
+
+    public function regional(): BelongsTo
+    {
+        return $this->belongsTo(Regional::class);
+    }
 
     public function regionals(): HasMany
     {
@@ -75,7 +88,7 @@ class Location extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'line1', 'number', 'complement', 'district', 'city', 'state', 'postal_code', 'country'])
+            ->logOnly(['administration_id', 'regional_id', 'name', 'line1', 'number', 'complement', 'district', 'city', 'state', 'postal_code', 'country'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }

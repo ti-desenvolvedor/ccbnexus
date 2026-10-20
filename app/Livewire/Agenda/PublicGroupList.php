@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Agenda;
 
+use App\Livewire\Concerns\DeletesPublicCatalogItems;
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\PublicGroup;
 use App\Models\Regional;
 use App\Services\OrganizationalContextService;
@@ -12,6 +14,8 @@ use Livewire\WithPagination;
 class PublicGroupList extends Component
 {
     use AuthorizesRequests;
+    use DeletesPublicCatalogItems;
+    use UsesAccountPagination;
     use WithPagination;
 
     public ?int $filter_regional_id = null;
@@ -45,7 +49,7 @@ class PublicGroupList extends Component
             : Regional::query()->whereIn('id', $user->accessibleRegionalIds())->orderBy('name')->get();
 
         return view('livewire.agenda.public-group-list', [
-            'groups' => $query->paginate(15),
+            'groups' => $query->paginate($this->paginatePerPage()),
             'regionals' => $regionals,
         ]);
     }

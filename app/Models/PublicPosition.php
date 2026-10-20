@@ -6,9 +6,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class PublicPosition extends Model
 {
+    use LogsActivity;
+
     protected $table = 'public_positions';
 
     protected $fillable = [
@@ -77,5 +81,16 @@ class PublicPosition extends Model
         }
 
         return $label;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly([
+                'public_department_id', 'public_subgroup_id', 'name', 'slug',
+                'is_active', 'sort_order', 'is_department_coordinator',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 }

@@ -6,9 +6,10 @@ use App\Models\Administration;
 use App\Models\PrayerHouse;
 use App\Models\Regional;
 use App\Models\User;
+use App\Support\PasswordStrength;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Livewire\Component;
 use Spatie\Permission\Models\Role;
 
@@ -82,7 +83,7 @@ class UserForm extends Component
             $this->authorize('create', User::class);
         }
 
-        $roleNames = Role::query()->where('guard_name', 'web')->pluck('name')->all();
+        $assignableRoles = $this->assignableRoleNames($auth);
 
         $rules = [
             'name' => ['required', 'string', 'max:255'],
@@ -92,13 +93,15 @@ class UserForm extends Component
             'administration_id' => ['nullable', 'exists:administrations,id'],
             'prayer_house_id' => ['nullable', 'exists:prayer_houses,id'],
             'role_names' => ['array'],
-            'role_names.*' => ['string', Rule::in($roleNames)],
+            'role_names.*' => ['string', Rule::in($assignableRoles)],
         ];
 
+        $passwordRules = ['string', Password::defaults(), 'confirmed'];
+
         if ($this->user) {
-            $rules['password'] = ['nullable', 'string', 'min:8', 'confirmed'];
+            $rules['password'] = array_merge(['nullable'], $passwordRules);
         } else {
-            $rules['password'] = ['required', 'string', 'min:8', 'confirmed'];
+            $rules['password'] = array_merge(['required'], $passwordRules);
         }
 
         if ($auth->isSuperAdmin()) {
@@ -137,20 +140,27 @@ class UserForm extends Component
             'regional_id' => $data['regional_id'] ?? null,
             'administration_id' => $data['administration_id'] ?? null,
             'prayer_house_id' => $data['prayer_house_id'] ?? null,
-            'is_super_admin' => (bool) ($data['is_super_admin'] ?? false),
         ];
+
+        $wantSuper = $auth->isSuperAdmin() && (bool) ($data['is_super_admin'] ?? false);
 
         if ($this->user) {
             if (! empty($data['password'])) {
-                $payload['password'] = Hash::make($data['password']);
+                $payload = array_merge($payload, PasswordStrength::stored($data['password']));
             }
             $this->user->update($payload);
+            if ($auth->isSuperAdmin()) {
+                $this->user->forceFill(['is_super_admin' => $wantSuper])->save();
+            }
             $this->user->syncRoles($data['role_names'] ?? []);
             session()->flash('status', __('Utilizador atualizado.'));
         } else {
-            $payload['password'] = Hash::make($data['password']);
+            $payload = array_merge($payload, PasswordStrength::stored($data['password']));
             $payload['email_verified_at'] = now();
             $new = User::query()->create($payload);
+            if ($auth->isSuperAdmin()) {
+                $new->forceFill(['is_super_admin' => $wantSuper])->save();
+            }
             $new->syncRoles($data['role_names'] ?? []);
             session()->flash('status', __('Utilizador criado.'));
         }
@@ -182,6 +192,19 @@ class UserForm extends Component
                 abort(403, __('Sem permissão para esta casa de oração.'));
             }
         }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function assignableRoleNames(User $auth): array
+    {
+        $names = Role::query()->where('guard_name', 'web')->pluck('name')->all();
+        if ($auth->isSuperAdmin()) {
+            return $names;
+        }
+
+        return array_values(array_filter($names, fn (string $n) => $n !== 'Administrador'));
     }
 
     protected function validateOrganizationalChain(): bool
@@ -229,11 +252,16 @@ class UserForm extends Component
                 ->get();
         }
 
+        $roles = Role::query()->where('guard_name', 'web')->orderBy('name')->get();
+        if (! $auth->isSuperAdmin()) {
+            $roles = $roles->where('name', '!=', 'Administrador')->values();
+        }
+
         return view('livewire.users.user-form', [
             'regionals' => $regionals,
             'administrations' => $administrations,
             'prayerHouses' => $prayerHouses,
-            'roles' => Role::query()->where('guard_name', 'web')->orderBy('name')->get(),
+            'roles' => $roles,
         ]);
     }
 }

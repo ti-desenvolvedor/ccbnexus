@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Organization;
 
+use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\Administration;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Livewire\Component;
@@ -10,6 +11,7 @@ use Livewire\WithPagination;
 class AdministrationList extends Component
 {
     use AuthorizesRequests;
+    use UsesAccountPagination;
     use WithPagination;
 
     public string $search = '';
@@ -43,7 +45,7 @@ class AdministrationList extends Component
         }
 
         return view('livewire.organization.administration-list', [
-            'administrations' => $query->paginate(12),
+            'administrations' => $query->paginate($this->paginatePerPage()),
         ]);
     }
 }

@@ -2,9 +2,9 @@
 
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
+use App\Support\PasswordStrength;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -27,7 +27,10 @@ new #[Layout('layouts.guest')] class extends Component
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        $validated = array_merge(
+            $validated,
+            PasswordStrength::stored($validated['password']),
+        );
 
         event(new Registered($user = User::create($validated)));
 
@@ -61,6 +64,7 @@ new #[Layout('layouts.guest')] class extends Component
                             type="password"
                             name="password"
                             required autocomplete="new-password" />
+            <x-auth.password-hint />
 
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>

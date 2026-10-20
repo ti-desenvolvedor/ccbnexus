@@ -25,6 +25,15 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
+        // Super-admin passa em can:/middleware de permissão (ex.: visualizar_relatorios).
+        Gate::before(function (?User $user, string $ability) {
+            if ($user?->isSuperAdmin()) {
+                return true;
+            }
+
+            return null;
+        });
+
         Gate::define('viewUserRoleDirectory', fn (User $user) => $user->isSuperAdmin() || $user->can('gerenciar_usuarios'));
     }
 }
