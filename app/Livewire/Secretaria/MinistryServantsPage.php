@@ -41,6 +41,7 @@ class MinistryServantsPage extends Component
 
     public function edit(int $servantId, OrganizationalContextService $context): void
     {
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $servant = MinistryServant::query()
             ->with('attendanceHouses')
             ->where('regional_id', $this->regionalForWrite($context))
@@ -61,6 +62,7 @@ class MinistryServantsPage extends Component
 
     public function save(OrganizationalContextService $context): void
     {
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $regionalId = $this->regionalForWrite($context);
         if ($this->editingId) {
             abort_unless(
@@ -106,7 +108,7 @@ class MinistryServantsPage extends Component
             'servants' => $servants,
             'prayerHouses' => $regionalId ? MinistryServant::prayerHousesForRegional($regionalId) : collect(),
             'ministryOffices' => $regionalId ? $catalog->ministryOffices($regionalId) : collect(),
-            'canRegisterServant' => (bool) $regionalId,
+            'canRegisterServant' => (bool) $regionalId && (bool) auth()->user()?->canMaintainSecretaria(),
         ]);
     }
 

@@ -75,7 +75,7 @@ Ordem fixa em cada entrega:
 ### 4.3 Lacunas principais (delta restante)
 
 1. **RBAC escopado** (Spatie teams ou `scoped_role_assignments`) — papéis Facilitador/Moderador por regional. Desenho em `docs/RBAC_SCOPED_DESIGN.md` (aguarda PO). Deprecação de audiences: `docs/DEPRECATE_AUDIENCES.md`. **(D4) Decisão pendente:** modelo final de RBAC escopado (Spatie `teams` vs pivot custom com `regional_id` / administração / casa) ainda não está fechado; Etapa 3 endurece `canAccessRegional` nas policies/listagens, mas não substitui papéis por regional.
-2. Endurecer **aprovação server-side** (reservas/eventos) e **locks** de conflito.
+2. Evento, aviso WhatsApp, exportação e pedido de acesso sem `regional_id` deixaram de ser visíveis fora do super-admin. Escrita da secretaria exige `editar_evento`, `gerenciar_avisos` ou `moderar_conteudo` — `visualizar_relatorios` só lê.
 3. Deprecar **`audiences`** em favor de `public_*` (decisão explícita em PR).
 4. UX Facilitador: menu, command palette, calendário semanal de salas, empty states, contexto no topbar.
 5. ~~Policies ainda **permission-only** em Parking / catálogo / templates WhatsApp / Approvals queue.~~ *(Etapa 3: checks de regional/escopo aplicados.)*

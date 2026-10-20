@@ -182,10 +182,7 @@ class AgendaReadQuery
 
         if (! $user->isSuperAdmin()) {
             $ids = $user->accessibleRegionalIds();
-            $query->where(function (Builder $scope) use ($ids) {
-                $scope->whereIn('events.regional_id', $ids)
-                    ->orWhereNull('events.regional_id');
-            });
+            $query->whereIn('events.regional_id', $ids === [] ? [-1] : $ids);
         }
 
         if ($regionalId !== null) {

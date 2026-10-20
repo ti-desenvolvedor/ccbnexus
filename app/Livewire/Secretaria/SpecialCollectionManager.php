@@ -36,6 +36,7 @@ class SpecialCollectionManager extends Component
 
     public function save(OrganizationalContextService $context): void
     {
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $rid = $context->activeRegionalId();
         abort_unless($rid, 403);
         $data = $this->validate([

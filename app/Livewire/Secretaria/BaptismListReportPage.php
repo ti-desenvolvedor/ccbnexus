@@ -73,7 +73,7 @@ class BaptismListReportPage extends Component
 
         $this->resetSectionFiltersToDefaults();
         $user = auth()->user();
-        if (! $user || (! $user->isSuperAdmin() && ! $user->can('editar_evento') && ! $user->can('visualizar_relatorios'))) {
+        if (! $user || ! $user->canMaintainSecretaria()) {
             $this->reportId = null;
 
             return;
@@ -126,7 +126,7 @@ class BaptismListReportPage extends Component
 
     public function applySectionFilter(string $sectionKey, BaptismListReportBuilder $builder, OrganizationalContextService $context): void
     {
-        abort_unless(auth()->user()?->can('editar_evento') || auth()->user()?->can('visualizar_relatorios'), 403);
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $this->validate([
             "sectionFilters.{$sectionKey}.from" => ['required', 'date'],
             "sectionFilters.{$sectionKey}.to" => ['required', 'date', 'after_or_equal:sectionFilters.'.$sectionKey.'.from'],
@@ -143,7 +143,7 @@ class BaptismListReportPage extends Component
     protected function runGenerate(BaptismListReportBuilder $builder, OrganizationalContextService $context, bool $newRevision): void
     {
         $user = auth()->user();
-        abort_unless($user?->isSuperAdmin() || $user?->can('editar_evento') || $user?->can('visualizar_relatorios'), 403);
+        abort_unless($user?->canMaintainSecretaria(), 403);
         $rid = $context->activeRegionalId();
         if (! $rid) {
             session()->flash('status', __('Selecione uma regional ativa no filtro de contexto.'));
@@ -165,7 +165,7 @@ class BaptismListReportPage extends Component
 
     public function toggleItem(int $itemId): void
     {
-        abort_unless(auth()->user()?->can('editar_evento') || auth()->user()?->can('visualizar_relatorios'), 403);
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $item = BaptismListReportItem::query()->findOrFail($itemId);
         $this->authorizeReport($item->report);
         $item->update(['is_visible' => ! $item->is_visible]);
@@ -177,6 +177,7 @@ class BaptismListReportPage extends Component
         if (! $report) {
             return;
         }
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $this->authorizeReport($report);
         $report->items()->where('section_key', $sectionKey)->update(['is_visible' => false]);
     }
@@ -187,6 +188,7 @@ class BaptismListReportPage extends Component
         if (! $report) {
             return;
         }
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $this->authorizeReport($report);
         $report->items()->where('section_key', $sectionKey)->update(['is_visible' => true]);
     }
@@ -197,6 +199,7 @@ class BaptismListReportPage extends Component
         if (! $report) {
             return;
         }
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $this->authorizeReport($report);
         foreach ($report->items as $item) {
             $label = (string) ($item->payload['location_label'] ?? '');

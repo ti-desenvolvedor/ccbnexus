@@ -72,13 +72,11 @@ class AccessRequestList extends Component
         if (! $user->isSuperAdmin()) {
             $ids = $user->accessibleRegionalIds();
             $active = $context->activeRegionalId();
-            $query->where(function ($q) use ($ids, $active) {
-                $q->whereIn('regional_id', $ids);
-                if ($active) {
-                    $q->orWhere('regional_id', $active);
-                }
-                $q->orWhereNull('regional_id');
-            });
+            $allowed = $ids;
+            if ($active && in_array($active, $ids, true)) {
+                $allowed[] = $active;
+            }
+            $query->whereIn('regional_id', $allowed === [] ? [-1] : array_values(array_unique($allowed)));
         }
 
         return view('livewire.access.access-request-list', [

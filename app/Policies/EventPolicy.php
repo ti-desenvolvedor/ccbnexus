@@ -23,7 +23,7 @@ class EventPolicy
         }
 
         if ($event->regional_id === null) {
-            return true;
+            return false;
         }
 
         return $user->canAccessRegional($event->regional);

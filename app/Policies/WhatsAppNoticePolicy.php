@@ -24,7 +24,7 @@ class WhatsAppNoticePolicy
         }
 
         if ($notice->regional_id === null) {
-            return true;
+            return false;
         }
 
         return in_array((int) $notice->regional_id, $user->accessibleRegionalIds(), true);

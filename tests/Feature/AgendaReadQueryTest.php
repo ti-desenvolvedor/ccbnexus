@@ -29,6 +29,23 @@ class AgendaReadQueryTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
     }
 
+    public function test_unscoped_events_stay_hidden_without_active_context(): void
+    {
+        $this->regionals();
+        $user = User::factory()->create();
+        $user->givePermissionTo('visualizar_evento');
+        $this->event(null, 'Sem regional');
+        session()->forget('nexus.active_regional_id');
+
+        $titles = $this->pluck(app(AgendaReadQuery::class)->read($user, new AgendaReadCriteria(
+            mode: AgendaReadCriteria::MODE_OCCURRENCES,
+            window: AgendaReadCriteria::WINDOW_MONTH,
+            cursor: '2026-10-16',
+        )));
+
+        $this->assertSame([], $titles);
+    }
+
     public function test_hides_other_regional_and_null_regional_when_context_is_set(): void
     {
         [$a, $b] = $this->regionals();

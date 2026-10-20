@@ -181,6 +181,18 @@ class User extends Authenticatable implements MustVerifyEmail
         return $ids->unique()->values()->all();
     }
 
+    /**
+     * Escrita na secretaria (avisos, alterações, coletas, lista de batismos, quem atende).
+     * Ver relatórios não basta.
+     */
+    public function canMaintainSecretaria(): bool
+    {
+        return $this->isSuperAdmin()
+            || $this->can('editar_evento')
+            || $this->can('gerenciar_avisos')
+            || $this->can('moderar_conteudo');
+    }
+
     public function canAccessRegional(Regional $regional): bool
     {
         if ($this->isSuperAdmin()) {

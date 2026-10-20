@@ -321,9 +321,7 @@ class OfficeOverview
     {
         if (! $user->isSuperAdmin()) {
             $ids = $user->accessibleRegionalIds();
-            $query->where(function (Builder $inner) use ($ids) {
-                $inner->whereIn('regional_id', $ids)->orWhereNull('regional_id');
-            });
+            $query->whereIn('regional_id', $ids === [] ? [-1] : $ids);
         }
 
         if ($regionalId) {

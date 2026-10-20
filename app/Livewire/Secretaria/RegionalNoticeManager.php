@@ -40,6 +40,7 @@ class RegionalNoticeManager extends Component
 
     public function save(OrganizationalContextService $context): void
     {
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $rid = $context->activeRegionalId();
         abort_unless($rid, 403);
         $data = $this->validate([
@@ -68,6 +69,7 @@ class RegionalNoticeManager extends Component
 
     public function edit(int $id, OrganizationalContextService $context): void
     {
+        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $n = RegionalNotice::query()->where('regional_id', $context->activeRegionalId())->findOrFail($id);
         $this->editingId = $n->id;
         $this->title = $n->title;

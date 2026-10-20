@@ -39,7 +39,7 @@ class ApprovalPolicy
 
         if ($model instanceof Event) {
             if ($model->regional_id === null) {
-                return true;
+                return false;
             }
 
             $model->loadMissing('regional');

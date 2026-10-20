@@ -18,9 +18,7 @@ class EventExportService
 
         if (! $user->isSuperAdmin()) {
             $ids = $user->accessibleRegionalIds();
-            $query->where(function ($q) use ($ids) {
-                $q->whereIn('regional_id', $ids)->orWhereNull('regional_id');
-            });
+            $query->whereIn('regional_id', $ids === [] ? [-1] : $ids);
         }
 
         $filename = 'eventos-'.now()->format('Y-m-d-His').'.csv';
