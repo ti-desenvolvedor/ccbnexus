@@ -61,5 +61,7 @@ return [
         ],
         'default_theme' => 'light',
         'default_palette' => 'blue',
+        'sidebar_modes' => ['expanded', 'icons'],
+        'default_sidebar' => 'expanded',
     ],
 ];

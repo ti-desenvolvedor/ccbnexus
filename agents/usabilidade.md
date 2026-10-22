@@ -35,6 +35,7 @@ Todo campo de escolha usa este componente (listas curtas e longas).
 - **Contexto ativo** sempre visível no topbar (não só Dashboard/Profile)
 - Painel: o bloco de listas de batismos resume **Para aprovação** e **Aprovadas**. O selo Publicado do evento não aparece no card de batismo da semana.
 - **Command palette** (`Ctrl+K` / `/`) como acelerador; menu lateral continua canónico
+- **Menu lateral**: o padrão é aberto, com os nomes. Em Perfil → Preferências da conta (ou no botão no rodapé do menu, em ecrã largo) a pessoa pode escolher **Minimizado**. Nesse modo, em `lg+`, fica uma faixa de ícones; o menu completo abre por cima do conteúdo ao passar o mouse, ao focar com o teclado, ou ao tocar numa secção. O conteúdo não muda de largura enquanto o menu está aberto. No telemóvel a gaveta continua com os nomes. Esc fecha o menu aberto por cima.
 - Atalhos: `g d/e/r/u`, `n e/r`, `c` contexto, `?` cheatsheet — ignorar com foco em input
 - Secção **Facilitador** no menu com badges de pendências
 

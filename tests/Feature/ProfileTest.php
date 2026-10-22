@@ -27,6 +27,9 @@ class ProfileTest extends TestCase
             ->assertSee(__('Perfil'))
             ->assertSee(__('Personalizar foto'))
             ->assertSee(__('Itens por página nas listagens'))
+            ->assertSee(__('Menu lateral'))
+            ->assertSee(__('Minimizar menu'))
+            ->assertSee(__('Normal'))
             ->assertSeeVolt('profile.update-profile-information-form')
             ->assertSeeVolt('profile.update-password-form')
             ->assertSeeVolt('profile.delete-user-form');
@@ -71,6 +74,47 @@ class ProfileTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertSame(35, $user->fresh()->resolvedListPerPage());
+    }
+
+    public function test_sidebar_defaults_to_expanded_and_can_be_saved_minimized(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertSame('expanded', $user->resolvedUiSidebar());
+
+        $this->actingAs($user);
+
+        Livewire::test(UpdateAccountPreferences::class)
+            ->call('setUiSidebar', 'icons')
+            ->assertSet('ui_sidebar', 'icons')
+            ->assertHasNoErrors();
+
+        $this->assertSame('icons', $user->fresh()->resolvedUiSidebar());
+
+        Livewire::test(UpdateAccountPreferences::class)
+            ->set('ui_sidebar', 'expanded')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('expanded', $user->fresh()->ui_sidebar);
+    }
+
+    public function test_sidebar_toggle_persists_the_account_preference(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        Livewire::test(\App\Livewire\Shell\SidebarDensityToggle::class)
+            ->call('setDensity', 'icons')
+            ->assertDispatched('sidebar-density-updated');
+
+        $this->assertSame('icons', $user->fresh()->resolvedUiSidebar());
+
+        Livewire::test(\App\Livewire\Shell\SidebarDensityToggle::class)
+            ->call('setDensity', 'nope');
+
+        $this->assertSame('icons', $user->fresh()->resolvedUiSidebar());
     }
 
     public function test_list_per_page_is_clamped_to_configured_bounds(): void

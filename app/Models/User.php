@@ -40,6 +40,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'list_per_page',
         'ui_theme',
         'ui_palette',
+        'ui_sidebar',
     ];
 
     /**
@@ -98,7 +99,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return LogOptions::defaults()
             ->logOnly([
                 'name', 'email', 'phone', 'password_strength', 'regional_id', 'administration_id', 'prayer_house_id',
-                'list_per_page', 'ui_theme', 'ui_palette', 'is_super_admin', 'email_verified_at',
+                'list_per_page', 'ui_theme', 'ui_palette', 'ui_sidebar', 'is_super_admin', 'email_verified_at',
             ])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
@@ -155,6 +156,14 @@ class User extends Authenticatable implements MustVerifyEmail
         $palette = $this->ui_palette ?? config('nexus.ui.default_palette', 'blue');
 
         return in_array($palette, $allowed, true) ? $palette : 'blue';
+    }
+
+    public function resolvedUiSidebar(): string
+    {
+        $allowed = config('nexus.ui.sidebar_modes', ['expanded', 'icons']);
+        $sidebar = $this->ui_sidebar ?? config('nexus.ui.default_sidebar', 'expanded');
+
+        return in_array($sidebar, $allowed, true) ? $sidebar : 'expanded';
     }
 
     /**

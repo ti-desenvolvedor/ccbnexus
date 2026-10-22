@@ -26,7 +26,9 @@
             'facilitator' => request()->routeIs(['access.requests.*', 'agenda.approvals.*', 'facilitator.*']),
             'theme' => auth()->user()?->resolvedUiTheme(),
             'palette' => auth()->user()?->resolvedUiPalette(),
+            'sidebar' => auth()->user()?->resolvedUiSidebar(),
         ])))"
+        x-on:sidebar-density-updated.window="if ($event.detail && $event.detail.density) { $store.nexus.applySidebarDensity($event.detail.density) }"
     >
         <div class="min-h-screen">
             <!-- Mobile sidebar overlay -->
@@ -40,14 +42,20 @@
 
             <!-- Sidebar -->
             <aside
-                class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800/80 dark:bg-slate-950/70 lg:translate-x-0"
+                class="nexus-sidebar fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800/80 dark:bg-slate-950/70 lg:translate-x-0"
                 :class="{
                     '-translate-x-full': !$store.nexus.sidebarOpen,
                     'translate-x-0': $store.nexus.sidebarOpen,
+                    'is-rail': $store.nexus.isSidebarRail(),
+                    'is-peek': $store.nexus.sidebarDensity === 'icons' && $store.nexus.sidebarPeek,
                 }"
+                @mouseenter="$store.nexus.armSidebarPeek()"
+                @mouseleave="$store.nexus.releaseSidebarPeek()"
+                @focusin="$store.nexus.armSidebarPeek()"
+                @focusout="if (!$el.contains($event.relatedTarget)) { $store.nexus.releaseSidebarPeek() }"
                 style="background-color: rgb(var(--sidebar-bg) / 0.92); border-color: rgb(var(--sidebar-border) / 1); color: rgb(var(--sidebar-text) / 1);"
             >
-                <div class="flex h-16 items-center px-4">
+                <div class="sidebar-brand flex h-16 items-center px-4">
                     <x-brand-logo class="min-w-0 flex-1">
                         <x-slot name="subtitle">
                             <span class="truncate text-xs font-medium text-[rgb(var(--sidebar-muted)_/_1)]">{{ __('Painel') }}</span>
@@ -57,13 +65,13 @@
 
                 <nav class="flex-1 space-y-6 overflow-y-auto px-3 pb-6 pt-2">
                     <div>
-                        <div class="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide" style="color: rgb(var(--sidebar-muted) / 1);">{{ __('Menu') }}</div>
+                        <div class="sidebar-kicker px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide" style="color: rgb(var(--sidebar-muted) / 1);">{{ __('Menu') }}</div>
                         <div class="space-y-1">
                             <a
                                 href="{{ route('dashboard') }}"
                                 @click="$store.nexus.ensureSidebarExpandedForNavigation()"
                                 title="{{ __('Painel') }}"
-                                class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium"
+                                class="sidebar-root flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium"
                                 :class="$store.nexus.isActiveExact('/') || $store.nexus.isActivePrefix('/dashboard') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'bg-slate-900/50 shadow-sm ring-1 ring-slate-800/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-white/10' : 'bg-white shadow-sm ring-1 ring-slate-200/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-slate-50')"
                                 :aria-current="($store.nexus.isActiveExact('/') || $store.nexus.isActivePrefix('/dashboard')) ? 'page' : null"
                             >
@@ -75,7 +83,7 @@
                                         <path stroke-width="2" stroke-linecap="round" d="M4 13h4v7H4zM10 3h4v17h-4zM16 8h4v12h-4z" />
                                     </svg>
                                 </span>
-                                <span class="truncate">{{ __('Painel') }}</span>
+                                <span class="sidebar-copy truncate">{{ __('Painel') }}</span>
                             </a>
 
                             @auth
@@ -89,7 +97,7 @@
                                     <div class="pt-2">
                                         <button
                                             type="button"
-                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold"
+                                            class="sidebar-root flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold"
                                             :class="$store.nexus.isActivePrefix(['/access','/agenda/approvals','/facilitator']) ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'bg-slate-900/50 shadow-sm ring-1 ring-slate-800/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-white/10' : 'bg-white shadow-sm ring-1 ring-slate-200/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-slate-50')"
                                             aria-label="{{ __('Facilitador: pedidos, aprovações e reservas') }}"
                                             @click="$store.nexus.toggleMenu('facilitator')"
@@ -98,13 +106,13 @@
                                             <span class="grid h-9 w-9 place-items-center rounded-lg" :class="$store.nexus.isActivePrefix(['/access','/agenda/approvals','/facilitator']) ? 'bg-white/15 text-white' : ($store.nexus.theme === 'dark' ? 'bg-white/10' : 'bg-slate-50 ring-1 ring-slate-200/60')">
                                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                                             </span>
-                                            <span class="min-w-0 flex-1 truncate">{{ __('Facilitador') }}</span>
+                                            <span class="sidebar-copy min-w-0 flex-1 truncate">{{ __('Facilitador') }}</span>
                                             @if ($facilitatorBadge > 0)
-                                                <span class="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">{{ $facilitatorBadge > 99 ? '99+' : $facilitatorBadge }}</span>
+                                                <span class="sidebar-badge rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">{{ $facilitatorBadge > 99 ? '99+' : $facilitatorBadge }}</span>
                                             @endif
-                                            <svg class="h-4 w-4 transition" :class="{ 'rotate-90': $store.nexus.menu.facilitator }" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" d="M9 6l6 6-6 6" /></svg>
+                                            <svg class="sidebar-chevron h-4 w-4 transition" :class="{ 'rotate-90': $store.nexus.menu.facilitator }" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" d="M9 6l6 6-6 6" /></svg>
                                         </button>
-                                        <div x-show="$store.nexus.menu.facilitator" x-transition class="mt-1 space-y-1 pl-2">
+                                        <div x-show="$store.nexus.menu.facilitator" x-transition class="sidebar-branch mt-1 space-y-1 pl-2">
                                             @can('viewAny', \App\Models\AccessRequest::class)
                                                 <a href="{{ route('access.requests.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10" :aria-current="$store.nexus.isActivePrefix('/access/requests') ? 'page' : null">
                                                     <span>{{ __('Pedidos de acesso') }}</span>
@@ -135,7 +143,7 @@
                             <div class="pt-2">
                                 <button
                                     type="button"
-                                    class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold"
+                                    class="sidebar-root flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold"
                                     :class="$store.nexus.isActivePrefix(['/organization','/users','/access']) ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'bg-slate-900/50 shadow-sm ring-1 ring-slate-800/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-white/10' : 'bg-white shadow-sm ring-1 ring-slate-200/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-slate-50')"
                                     title="{{ __('Organização') }}"
                                     @click="$store.nexus.toggleMenu('org')"
@@ -146,13 +154,13 @@
                                             <path stroke-width="2" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h10" />
                                         </svg>
                                     </span>
-                                    <span class="min-w-0 flex-1 truncate">{{ __('Organização') }}</span>
-                                    <svg class="h-4 w-4 transition" :class="{ 'rotate-90': $store.nexus.menu.org, 'text-white/90': $store.nexus.isActivePrefix(['/organization','/users','/access']), 'text-[rgb(var(--sidebar-muted)/1)]': !$store.nexus.isActivePrefix(['/organization','/users','/access']) }" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <span class="sidebar-copy min-w-0 flex-1 truncate">{{ __('Organização') }}</span>
+                                    <svg class="sidebar-chevron h-4 w-4 transition" :class="{ 'rotate-90': $store.nexus.menu.org, 'text-white/90': $store.nexus.isActivePrefix(['/organization','/users','/access']), 'text-[rgb(var(--sidebar-muted)/1)]': !$store.nexus.isActivePrefix(['/organization','/users','/access']) }" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path stroke-width="2" stroke-linecap="round" d="M9 6l6 6-6 6" />
                                     </svg>
                                 </button>
 
-                                <div x-show="$store.nexus.menu.org || $store.nexus.isActivePrefix(['/organization','/users','/access'])" x-transition class="mt-1 space-y-1 pl-2">
+                                <div x-show="$store.nexus.menu.org || $store.nexus.isActivePrefix(['/organization','/users','/access'])" x-transition class="sidebar-branch mt-1 space-y-1 pl-2">
                                     @auth
                                         @can('viewAny', \App\Models\Regional::class)
                                             <a href="{{ route('organization.regionals.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" :class="$store.nexus.isActivePrefix('/organization/regionals') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-white/10' : 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-slate-100')" :aria-current="$store.nexus.isActivePrefix('/organization/regionals') ? 'page' : null">
@@ -196,7 +204,7 @@
                             <div class="pt-1">
                                 <button
                                     type="button"
-                                    class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold"
+                                    class="sidebar-root flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold"
                                     :class="$store.nexus.isActivePrefix('/infrastructure') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'bg-slate-900/50 shadow-sm ring-1 ring-slate-800/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-white/10' : 'bg-white shadow-sm ring-1 ring-slate-200/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-slate-50')"
                                     title="{{ __('Operação') }}"
                                     @click="$store.nexus.toggleMenu('ops')"
@@ -207,13 +215,13 @@
                                             <path stroke-width="2" stroke-linecap="round" d="M8 7V3M16 7V3M5 11h14M7 7h10a2 2 0 012 2v9a2 2 0 01-2 2H7a2 2 0 01-2-2V9a2 2 0 012-2z" />
                                         </svg>
                                     </span>
-                                    <span class="min-w-0 flex-1 truncate">{{ __('Operação') }}</span>
-                                    <svg class="h-4 w-4 transition" :class="{ 'rotate-90': $store.nexus.menu.ops, 'text-white/90': $store.nexus.isActivePrefix('/infrastructure'), 'text-[rgb(var(--sidebar-muted)/1)]': !$store.nexus.isActivePrefix('/infrastructure') }" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <span class="sidebar-copy min-w-0 flex-1 truncate">{{ __('Operação') }}</span>
+                                    <svg class="sidebar-chevron h-4 w-4 transition" :class="{ 'rotate-90': $store.nexus.menu.ops, 'text-white/90': $store.nexus.isActivePrefix('/infrastructure'), 'text-[rgb(var(--sidebar-muted)/1)]': !$store.nexus.isActivePrefix('/infrastructure') }" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path stroke-width="2" stroke-linecap="round" d="M9 6l6 6-6 6" />
                                     </svg>
                                 </button>
 
-                                <div x-show="$store.nexus.menu.ops || $store.nexus.isActivePrefix('/infrastructure')" x-transition class="mt-1 space-y-1 pl-2">
+                                <div x-show="$store.nexus.menu.ops || $store.nexus.isActivePrefix('/infrastructure')" x-transition class="sidebar-branch mt-1 space-y-1 pl-2">
                                     @auth
                                         @can('viewAny', \App\Models\Location::class)
                                             <a href="{{ route('infrastructure.locations.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" :class="$store.nexus.isActivePrefix('/infrastructure/locations') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-white/10' : 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-slate-100')" :aria-current="$store.nexus.isActivePrefix('/infrastructure/locations') ? 'page' : null">
@@ -246,7 +254,7 @@
                             <div class="pt-1">
                                 <button
                                     type="button"
-                                    class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold"
+                                    class="sidebar-root flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold"
                                     :class="$store.nexus.isActivePrefix(['/agenda','/reports']) ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'bg-slate-900/50 shadow-sm ring-1 ring-slate-800/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-white/10' : 'bg-white shadow-sm ring-1 ring-slate-200/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-slate-50')"
                                     title="{{ __('Agenda') }}"
                                     @click="$store.nexus.toggleMenu('agenda')"
@@ -257,13 +265,13 @@
                                             <path stroke-width="2" stroke-linecap="round" d="M8 7V3m8 4V3M5 11h14M5 21h14V11H5v10z" />
                                         </svg>
                                     </span>
-                                    <span class="min-w-0 flex-1 truncate">{{ __('Agenda') }}</span>
-                                    <svg class="h-4 w-4 transition" :class="{ 'rotate-90': $store.nexus.menu.agenda, 'text-white/90': $store.nexus.isActivePrefix(['/agenda','/reports']), 'text-[rgb(var(--sidebar-muted)/1)]': !$store.nexus.isActivePrefix(['/agenda','/reports']) }" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <span class="sidebar-copy min-w-0 flex-1 truncate">{{ __('Agenda') }}</span>
+                                    <svg class="sidebar-chevron h-4 w-4 transition" :class="{ 'rotate-90': $store.nexus.menu.agenda, 'text-white/90': $store.nexus.isActivePrefix(['/agenda','/reports']), 'text-[rgb(var(--sidebar-muted)/1)]': !$store.nexus.isActivePrefix(['/agenda','/reports']) }" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                         <path stroke-width="2" stroke-linecap="round" d="M9 6l6 6-6 6" />
                                     </svg>
                                 </button>
 
-                                <div x-show="$store.nexus.menu.agenda || $store.nexus.isActivePrefix(['/agenda','/reports'])" x-transition class="mt-1 space-y-1 pl-2">
+                                <div x-show="$store.nexus.menu.agenda || $store.nexus.isActivePrefix(['/agenda','/reports'])" x-transition class="sidebar-branch mt-1 space-y-1 pl-2">
                                     @auth
                                         @can('viewAny', \App\Models\Event::class)
                                             <a href="{{ route('agenda.events.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" :class="$store.nexus.isActivePrefix('/agenda/events') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-white/10' : 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-slate-100')" :aria-current="$store.nexus.isActivePrefix('/agenda/events') ? 'page' : null">
@@ -352,18 +360,19 @@
                                     <div class="space-y-1">
                                         <button
                                             type="button"
-                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold transition"
+                                            class="sidebar-root flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold transition"
                                             :class="$store.nexus.isActivePrefix('/secretaria') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'bg-slate-900/50 shadow-sm ring-1 ring-slate-800/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-white/10' : 'bg-white shadow-sm ring-1 ring-slate-200/70 text-[rgb(var(--sidebar-text)/1)] hover:bg-slate-50')"
+                                            title="{{ __('Secretaria') }}"
                                             @click="$store.nexus.toggleMenu('secretaria')"
                                             :aria-expanded="!!$store.nexus.menu.secretaria || $store.nexus.isActivePrefix('/secretaria')"
                                         >
                                             <span class="grid h-9 w-9 place-items-center rounded-lg" :class="$store.nexus.isActivePrefix('/secretaria') ? 'bg-white/15 text-white' : ($store.nexus.theme === 'dark' ? 'bg-white/10' : 'bg-slate-50 ring-1 ring-slate-200/60')">
                                                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v14l-4-2-4 2-4-2-4 2V6a2 2 0 012-2z"/></svg>
                                             </span>
-                                            <span class="min-w-0 flex-1 truncate">{{ __('Secretaria') }}</span>
-                                            <svg class="h-4 w-4 transition" :class="{ 'rotate-90': !!$store.nexus.menu.secretaria || $store.nexus.isActivePrefix('/secretaria') }" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" d="M9 6l6 6-6 6" /></svg>
+                                            <span class="sidebar-copy min-w-0 flex-1 truncate">{{ __('Secretaria') }}</span>
+                                            <svg class="sidebar-chevron h-4 w-4 transition" :class="{ 'rotate-90': !!$store.nexus.menu.secretaria || $store.nexus.isActivePrefix('/secretaria') }" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" d="M9 6l6 6-6 6" /></svg>
                                         </button>
-                                        <div x-show="!!$store.nexus.menu.secretaria || $store.nexus.isActivePrefix('/secretaria')" x-cloak x-transition class="mt-1 space-y-1 pl-2">
+                                        <div x-show="!!$store.nexus.menu.secretaria || $store.nexus.isActivePrefix('/secretaria')" x-cloak x-transition class="sidebar-branch mt-1 space-y-1 pl-2">
                                             @if ($canSecretariaReports)
                                                 <a href="{{ route('secretaria.baptism-list') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10" :aria-current="$store.nexus.isActivePrefix('/secretaria/lista-batismos') ? 'page' : null">{{ __('Lista de Batismos e Diversos') }}</a>
                                                 <a href="{{ route('secretaria.markings') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10" :aria-current="$store.nexus.isActivePrefix('/secretaria/marcacoes') ? 'page' : null">{{ __('Relatório de Marcações') }}</a>
@@ -386,10 +395,13 @@
                     </div>
                 </nav>
 
+                @auth
+                    <livewire:shell.sidebar-density-toggle />
+                @endauth
             </aside>
 
             <!-- Main -->
-            <div class="min-h-screen min-w-0 transition-[padding] duration-200 lg:pl-72">
+            <div class="nexus-main min-h-screen min-w-0 transition-[padding] duration-200 lg:pl-72" :class="{ 'is-rail-layout': $store.nexus.sidebarDensity === 'icons' }">
                 <!-- Topbar -->
                 <header
                     class="sticky top-0 z-30 border-b backdrop-blur"
@@ -524,7 +536,8 @@
                                     x-cloak
                                     x-show="open"
                                     @click.outside="open=false"
-                                    class="absolute right-0 mt-2 w-72 rounded-xl border p-3 text-sm shadow-lg"
+                                    @keydown.escape.window="open=false"
+                                    class="absolute right-0 z-[60] mt-2 w-72 rounded-xl border p-3 text-sm shadow-lg"
                                     style="border-color: rgb(var(--topbar-border) / 0.90); background-color: rgb(var(--topbar-bg) / 1); color: rgb(var(--topbar-text) / 1);"
                                 >
                                     <div class="font-semibold">{{ __('Notificações') }}</div>
@@ -559,10 +572,12 @@
                                     x-cloak
                                     x-show="open"
                                     @click.outside="open=false"
-                                    class="absolute right-0 mt-2 w-56 rounded-xl border py-1 text-sm shadow-lg"
+                                    @keydown.escape.window="open=false"
+                                    class="absolute right-0 z-[60] mt-2 w-56 rounded-xl border py-1 text-sm shadow-lg"
                                     style="border-color: rgb(var(--topbar-border) / 0.90); background-color: rgb(var(--topbar-bg) / 1); color: rgb(var(--topbar-text) / 1);"
+                                    role="menu"
                                 >
-                                    <a href="{{ route('profile') }}" class="flex min-h-11 items-center px-3 hover:bg-[rgb(var(--topbar-muted)/0.10)]">{{ __('Perfil') }}</a>
+                                    <a href="{{ route('profile') }}" wire:navigate @click="open=false" class="flex min-h-11 items-center px-3 hover:bg-[rgb(var(--topbar-muted)/0.10)]" role="menuitem">{{ __('Perfil') }}</a>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
                                         <button type="submit" class="flex min-h-11 w-full items-center px-3 text-left hover:bg-[rgb(var(--topbar-muted)/0.10)]">{{ __('Sair') }}</button>

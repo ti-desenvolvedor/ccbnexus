@@ -4,6 +4,11 @@ import { registerProfilePhotoCrop } from './profile-photo-crop';
 function createNexusStore() {
     return {
         sidebarOpen: false,
+        sidebarDensity: 'expanded', // expanded|icons
+        sidebarPeek: false,
+        sidebarHoverCapable: false,
+        sidebarPeekTimer: null,
+        sidebarListenersBound: false,
         theme: 'light', // light|dark
         palette: 'blue', // blue|navy|green|green_dark|red|red_dark|orange|brown
         path: '/',
@@ -28,6 +33,10 @@ function createNexusStore() {
 
             this.theme = accountTheme || storedTheme || 'light';
             this.palette = accountPalette || storedPalette || 'blue';
+            this.applySidebarDensity(hints?.sidebar === 'icons' ? 'icons' : 'expanded');
+            this.sidebarHoverCapable = typeof window.matchMedia === 'function'
+                && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+            this.bindSidebarChrome();
 
             if (accountTheme) {
                 localStorage.setItem('nexus.theme', this.theme);
@@ -127,6 +136,74 @@ function createNexusStore() {
             }
 
             this.closeSidebar();
+            if (!this.sidebarHoverCapable) {
+                this.sidebarPeek = false;
+            }
+        },
+
+        applySidebarDensity(mode) {
+            if (mode !== 'icons' && mode !== 'expanded') {
+                return;
+            }
+
+            this.sidebarDensity = mode;
+            this.sidebarPeek = false;
+            clearTimeout(this.sidebarPeekTimer);
+
+            try {
+                localStorage.setItem('nexus.sidebar', this.sidebarDensity);
+            } catch {
+                // ignore private mode
+            }
+        },
+
+        isSidebarRail() {
+            return this.sidebarDensity === 'icons' && !this.sidebarPeek;
+        },
+
+        armSidebarPeek() {
+            if (this.sidebarDensity !== 'icons') {
+                return;
+            }
+
+            clearTimeout(this.sidebarPeekTimer);
+            this.sidebarPeek = true;
+        },
+
+        releaseSidebarPeek() {
+            if (this.sidebarDensity !== 'icons' || !this.sidebarHoverCapable) {
+                return;
+            }
+
+            clearTimeout(this.sidebarPeekTimer);
+            this.sidebarPeekTimer = setTimeout(() => {
+                this.sidebarPeek = false;
+            }, 160);
+        },
+
+        bindSidebarChrome() {
+            if (this.sidebarListenersBound || typeof document === 'undefined') {
+                return;
+            }
+
+            this.sidebarListenersBound = true;
+
+            document.addEventListener('pointerdown', (event) => {
+                if (this.sidebarDensity !== 'icons' || !this.sidebarPeek || this.sidebarHoverCapable) {
+                    return;
+                }
+
+                const aside = document.querySelector('.nexus-sidebar');
+                if (aside && !aside.contains(event.target)) {
+                    this.sidebarPeek = false;
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && this.sidebarPeek && this.sidebarDensity === 'icons') {
+                    this.sidebarPeek = false;
+                }
+            });
         },
 
         toggleTheme() {
@@ -162,7 +239,8 @@ function createNexusStore() {
                 this.menu[key] = false;
             }
 
-            this.ensureSidebarExpandedForNavigation();
+            this.closeSidebar();
+            this.armSidebarPeek();
 
             const subMenuKeys = ['catalog'];
             const isSubMenu = subMenuKeys.includes(key);

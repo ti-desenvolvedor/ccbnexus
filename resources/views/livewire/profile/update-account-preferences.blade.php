@@ -7,11 +7,14 @@
         if ($event.detail.palette) {
             $store.nexus.setPalette($event.detail.palette);
         }
+        if ($event.detail.sidebar) {
+            $store.nexus.applySidebarDensity($event.detail.sidebar);
+        }
     "
 >
     <x-profile.section
         :title="__('Preferências da conta')"
-        :description="__('Paginação das listagens e aparência do painel — guardadas na sua conta.')"
+        :description="__('Paginação, aparência e menu lateral — guardados na sua conta.')"
     >
         <x-slot name="icon">
             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
@@ -114,6 +117,36 @@
                         <x-input-error class="mt-2" :messages="$errors->get('ui_palette')" />
                     </div>
                 </div>
+            </fieldset>
+
+            <fieldset class="space-y-4 border-t border-slate-200 pt-6 dark:border-slate-800">
+                <legend class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ __('Menu lateral') }}</legend>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                    {{ __('O padrão é o menu aberto, com os nomes. Minimizado deixa só os ícones e abre o menu ao passar o mouse ou ao usar o teclado. No celular, o menu continua pelo botão, com os nomes.') }}
+                </p>
+                <div class="grid gap-3 sm:grid-cols-2" role="group" aria-label="{{ __('Menu lateral') }}">
+                    <button
+                        type="button"
+                        wire:click="setUiSidebar('expanded')"
+                        x-on:click="$store.nexus.applySidebarDensity('expanded')"
+                        aria-pressed="{{ $ui_sidebar === 'expanded' ? 'true' : 'false' }}"
+                        class="min-h-11 rounded-xl border px-4 py-3 text-left transition {{ $ui_sidebar === 'expanded' ? 'border-primary-600 bg-primary-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-primary-300 hover:bg-primary-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-primary-700 dark:hover:bg-primary-950/40' }}"
+                    >
+                        <span class="block text-sm font-semibold">{{ __('Normal') }}</span>
+                        <span class="mt-0.5 block text-xs font-normal {{ $ui_sidebar === 'expanded' ? 'text-white/80' : 'text-slate-500 dark:text-slate-400' }}">{{ __('Nomes sempre visíveis. É o padrão.') }}</span>
+                    </button>
+                    <button
+                        type="button"
+                        wire:click="setUiSidebar('icons')"
+                        x-on:click="$store.nexus.applySidebarDensity('icons')"
+                        aria-pressed="{{ $ui_sidebar === 'icons' ? 'true' : 'false' }}"
+                        class="min-h-11 rounded-xl border px-4 py-3 text-left transition {{ $ui_sidebar === 'icons' ? 'border-primary-600 bg-primary-600 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-primary-300 hover:bg-primary-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-primary-700 dark:hover:bg-primary-950/40' }}"
+                    >
+                        <span class="block text-sm font-semibold">{{ __('Minimizado') }}</span>
+                        <span class="mt-0.5 block text-xs font-normal {{ $ui_sidebar === 'icons' ? 'text-white/80' : 'text-slate-500 dark:text-slate-400' }}">{{ __('Só ícones. O menu abre ao passar o mouse.') }}</span>
+                    </button>
+                </div>
+                <x-input-error class="mt-2" :messages="$errors->get('ui_sidebar')" />
             </fieldset>
 
             <div class="flex items-center gap-4 border-t border-slate-200 pt-4 dark:border-slate-800">
