@@ -271,9 +271,8 @@ class HolidayImportTest extends TestCase
 
         Livewire::actingAs($user)
             ->test(EventList::class)
-            ->set('cursor', '2026-10-21')
-            ->call('importHolidays')
-            ->assertSee('Recorrências atualizadas até 31/12/2027');
+            ->set('cursor', '2027-01-02')
+            ->assertSee('Ensaio mensal');
 
         $this->assertSame('2027-12-31', $open->fresh()->recurrence_until->toDateString());
         $this->assertSame('2026-06-30', $closed->fresh()->recurrence_until->toDateString());

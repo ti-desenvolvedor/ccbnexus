@@ -36,7 +36,15 @@ class AgendaEmbuArtes2026SeederTest extends TestCase
         $eaCentral = $parents->firstWhere('meta.excel_key', 'batismo-ea-central');
         $this->assertNotNull($eaCentral);
         $this->assertTrue((bool) $eaCentral->include_on_baptism_list);
-        $this->assertSame('2026-12-31', optional($eaCentral->recurrence_until)->toDateString());
+        $nextYearEnd = sprintf('%d-12-31', max(2026, (int) now()->year) + 1);
+        $this->assertSame($nextYearEnd, optional($eaCentral->recurrence_until)->toDateString());
+        $this->assertTrue(
+            Event::query()
+                ->where('parent_event_id', $eaCentral->id)
+                ->where('is_occurrence', true)
+                ->where('starts_at', '>=', ((int) substr($nextYearEnd, 0, 4)).'-01-01')
+                ->exists()
+        );
 
         $ago = $parents->firstWhere('meta.excel_key', 'ago-ea');
         $this->assertNotNull($ago);

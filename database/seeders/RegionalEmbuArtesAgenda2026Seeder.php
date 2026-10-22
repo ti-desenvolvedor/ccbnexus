@@ -113,7 +113,7 @@ class RegionalEmbuArtesAgenda2026Seeder extends Seeder
                 'parent_event_id' => null,
                 'recurrence_frequency' => $frequency === 'none' ? null : $frequency,
                 'recurrence_config' => $recurrenceConfig,
-                'recurrence_until' => $frequency === 'none' ? null : '2026-12-31',
+                'recurrence_until' => $frequency === 'none' ? null : sprintf('%d-12-31', max(2026, (int) now()->year) + 1),
                 'recurrence_interval_weeks' => 1,
                 'include_on_baptism_list' => (bool) ($row['bulletin'] ?? false),
                 'whatsapp_enabled' => (bool) ($row['whatsapp'] ?? ! ($row['bulletin'] ?? false)),

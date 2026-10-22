@@ -7,6 +7,7 @@ use App\Exceptions\Agenda\InvalidAgendaReadCriteria;
 use App\Models\Event;
 use App\Models\Regional;
 use App\Services\Agenda\AgendaYearBook;
+use App\Services\Agenda\RecurrenceHorizon;
 use App\Services\OrganizationalContextService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -18,6 +19,7 @@ class AgendaMonthPdfController extends Controller
     public function __invoke(
         Request $request,
         AgendaYearBook $book,
+        RecurrenceHorizon $horizon,
         OrganizationalContextService $context,
     ): Response {
         $user = $request->user();
@@ -35,6 +37,8 @@ class AgendaMonthPdfController extends Controller
         $regional = $regionalId
             ? Regional::query()->find($regionalId, ['id', 'name', 'slug'])
             : null;
+
+        $horizon->extendOpenSeries($regionalId);
 
         try {
             $document = $book->compose(

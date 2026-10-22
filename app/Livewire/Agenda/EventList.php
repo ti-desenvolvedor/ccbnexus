@@ -192,6 +192,9 @@ class EventList extends Component
         $this->normalizeCursor();
 
         $user = auth()->user();
+        app(RecurrenceHorizon::class)->extendOpenSeries(
+            app(OrganizationalContextService::class)->activeRegionalId()
+        );
         $result = $this->read($query, $user);
 
         $showPeriod = ! ($this->view === 'list' && $this->listMode === 'series');
