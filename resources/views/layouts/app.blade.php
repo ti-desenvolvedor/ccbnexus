@@ -63,7 +63,7 @@
                     </x-brand-logo>
                 </div>
 
-                <nav class="flex-1 space-y-6 overflow-y-auto px-3 pb-6 pt-2">
+                <nav class="nexus-scroll flex-1 space-y-6 overflow-y-auto px-3 pb-6 pt-2">
                     <div>
                         <div class="sidebar-kicker px-2 pb-2 text-[11px] font-semibold uppercase tracking-wide" style="color: rgb(var(--sidebar-muted) / 1);">{{ __('Menu') }}</div>
                         <div class="space-y-1">
@@ -87,7 +87,14 @@
                             </a>
 
                             @auth
-                                @if (auth()->user()->can('atuar_como_facilitador') || auth()->user()->can('aprovar_acesso') || auth()->user()->can('aprovar_evento') || auth()->user()->can('aprovar_reserva_sala') || auth()->user()->isSuperAdmin())
+                                @php
+                                    $showFacilitatorNav = auth()->user()->can('atuar_como_facilitador')
+                                        || auth()->user()->can('aprovar_acesso')
+                                        || auth()->user()->can('aprovar_evento')
+                                        || auth()->user()->can('aprovar_reserva_sala')
+                                        || auth()->user()->isSuperAdmin();
+                                @endphp
+                                @if ($showFacilitatorNav)
                                     @php
                                         $pendingAccess = \App\Models\AccessRequest::query()->where('status', 'pending')->count();
                                         $pendingApprovals = \App\Models\Approval::query()->where('status', 'pending')->count();
@@ -114,13 +121,13 @@
                                         </button>
                                         <div x-show="$store.nexus.menu.facilitator" x-transition class="sidebar-branch mt-1 space-y-1 pl-2">
                                             @can('viewAny', \App\Models\AccessRequest::class)
-                                                <a href="{{ route('access.requests.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10" :aria-current="$store.nexus.isActivePrefix('/access/requests') ? 'page' : null">
+                                                <a href="{{ route('access.requests.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm" :class="$store.nexus.isActivePrefix('/access/requests') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-100')" :aria-current="$store.nexus.isActivePrefix('/access/requests') ? 'page' : null">
                                                     <span>{{ __('Pedidos de acesso') }}</span>
                                                     @if ($pendingAccess)<span class="text-[10px] font-bold text-rose-500">{{ $pendingAccess }}</span>@endif
                                                 </a>
                                             @endcan
                                             @can('viewAny', \App\Models\Approval::class)
-                                                <a href="{{ route('agenda.approvals.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-white/10" :aria-current="$store.nexus.isActivePrefix('/agenda/approvals') ? 'page' : null">
+                                                <a href="{{ route('agenda.approvals.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm" :class="$store.nexus.isActivePrefix('/agenda/approvals') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-100')" :aria-current="$store.nexus.isActivePrefix('/agenda/approvals') ? 'page' : null">
                                                     <span>{{ __('Aprovações') }}</span>
                                                     @if ($pendingApprovals)<span class="text-[10px] font-bold text-rose-500">{{ $pendingApprovals }}</span>@endif
                                                 </a>
@@ -181,10 +188,12 @@
                                             </a>
                                         @endcan
                                         @can('viewAny', \App\Models\AccessRequest::class)
+                                            @unless ($showFacilitatorNav ?? false)
                                             <a href="{{ route('access.requests.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" :class="$store.nexus.isActivePrefix('/access/requests') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-white/10' : 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-slate-100')" :aria-current="$store.nexus.isActivePrefix('/access/requests') ? 'page' : null">
                                                 <svg class="h-4 w-4 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M13 12H3"/></svg>
                                                 <span>{{ __('Pedidos de acesso') }}</span>
                                             </a>
+                                            @endunless
                                         @endcan
                                         @can('viewAny', \App\Models\User::class)
                                             <a href="{{ route('users.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" :class="$store.nexus.isActivePrefix('/users') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-white/10' : 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-slate-100')" :aria-current="$store.nexus.isActivePrefix('/users') ? 'page' : null">
@@ -321,10 +330,12 @@
                                             </a>
                                         @endcan
                                         @can('viewAny', \App\Models\Approval::class)
+                                            @unless ($showFacilitatorNav ?? false)
                                             <a href="{{ route('agenda.approvals.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" :class="$store.nexus.isActivePrefix('/agenda/approvals') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-white/10' : 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-slate-100')" :aria-current="$store.nexus.isActivePrefix('/agenda/approvals') ? 'page' : null">
                                                 <svg class="h-4 w-4 shrink-0 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                 <span>{{ __('Aprovações') }}</span>
                                             </a>
+                                            @endunless
                                         @endcan
                                         @can('gerenciar_avisos')
                                             <a href="{{ route('agenda.whatsapp.index') }}" wire:navigate @click="$store.nexus.ensureSidebarExpandedForNavigation()" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm" :class="$store.nexus.isActivePrefix('/agenda/whatsapp') ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500/40' : ($store.nexus.theme === 'dark' ? 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-white/10' : 'text-[rgb(var(--sidebar-muted)/1)] hover:bg-slate-100')" :aria-current="$store.nexus.isActivePrefix('/agenda/whatsapp') ? 'page' : null">

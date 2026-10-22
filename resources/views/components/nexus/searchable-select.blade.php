@@ -7,6 +7,7 @@
     'emptyMessage' => 'Nenhum resultado encontrado',
     'emptyLabel' => null,
     'disabled' => false,
+    'disabledHint' => null,
     'multiple' => false,
     'preview' => 8,
     'id' => null,
@@ -87,6 +88,7 @@
         aria-haspopup="listbox"
         aria-controls="{{ $controlId }}-list"
         @if ($ariaLabel) aria-label="{{ $ariaLabel }}" @endif
+        @if ($isDisabled && filled($disabledHint)) title="{{ $disabledHint }}" @endif
         class="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
     >
         <span class="truncate" x-text="selectedLabel || placeholder" x-bind:class="selectedLabel ? '' : 'text-slate-600 dark:text-slate-300'"></span>
@@ -227,6 +229,7 @@
                     }
 
                     const value = this.selected === null || this.selected === undefined ? '' : String(this.selected);
+                    if (value === '') return '';
                     return this.options.find((option) => String(option.value) === value)?.label || '';
                 },
 

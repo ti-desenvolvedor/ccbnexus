@@ -31,19 +31,12 @@ function createNexusStore() {
             const accountTheme = hints?.theme;
             const accountPalette = hints?.palette;
 
-            this.theme = accountTheme || storedTheme || 'light';
-            this.palette = accountPalette || storedPalette || 'blue';
+            this.theme = storedTheme || accountTheme || 'light';
+            this.palette = storedPalette || accountPalette || 'blue';
             this.applySidebarDensity(hints?.sidebar === 'icons' ? 'icons' : 'expanded');
             this.sidebarHoverCapable = typeof window.matchMedia === 'function'
                 && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
             this.bindSidebarChrome();
-
-            if (accountTheme) {
-                localStorage.setItem('nexus.theme', this.theme);
-            }
-            if (accountPalette) {
-                localStorage.setItem('nexus.palette', this.palette);
-            }
 
             try {
                 const raw = localStorage.getItem('nexus.menu');

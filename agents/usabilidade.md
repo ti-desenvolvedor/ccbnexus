@@ -37,7 +37,8 @@ Todo campo de escolha usa este componente (listas curtas e longas).
 - **Command palette** (`Ctrl+K` / `/`) como acelerador; menu lateral continua canónico
 - **Menu lateral**: o padrão é aberto, com os nomes. Em Perfil → Preferências da conta (ou no botão no rodapé do menu, em ecrã largo) a pessoa pode escolher **Minimizado**. Nesse modo, em `lg+`, fica uma faixa de ícones; o menu completo abre por cima do conteúdo ao passar o mouse, ao focar com o teclado, ou ao tocar numa secção. O conteúdo não muda de largura enquanto o menu está aberto. No telemóvel a gaveta continua com os nomes. Esc fecha o menu aberto por cima.
 - Atalhos: `g d/e/r/u`, `n e/r`, `c` contexto, `?` cheatsheet — ignorar com foco em input
-- Secção **Facilitador** no menu com badges de pendências
+- Secção **Facilitador** no menu com badges de pendências. Quando essa secção está visível, Pedidos de acesso e Aprovações não se repetem em Organização nem em Agenda.
+- Contexto no topbar: Administração e Casa ficam inativos até o nível anterior estar escolhido, com o motivo no `title` do controle.
 
 ## Mobile
 

@@ -15,23 +15,27 @@
             aria-label="{{ __('Administração') }}"
             class="w-full sm:min-w-[10rem] sm:flex-1"
             :empty-label="__('Administração')"
+            :placeholder="__('Administração')"
             :search-placeholder="__('Buscar administração...')"
             :options="$this->administrations"
             :disabled="! $regionalId"
+            :disabled-hint="$regionalId ? null : __('Escolha a regional antes.')"
         />
         <x-nexus.searchable-select
             wire:model.live="prayerHouseId"
             aria-label="{{ __('Casa de oração') }}"
             class="w-full sm:min-w-[10rem] sm:flex-1"
             :empty-label="__('Casa')"
+            :placeholder="__('Casa')"
             :search-placeholder="__('Buscar casa...')"
             label-key="display_label"
             :options="$this->prayerHouses"
             :disabled="! $administrationId"
+            :disabled-hint="$administrationId ? null : __('Escolha a administração antes da casa.')"
         />
         <x-ui.button type="button" wire:click="apply" size="sm" variant="secondary" class="min-h-11 w-full sm:w-auto" title="{{ __('O contexto já aplica ao mudar a regional; use se a página não atualizar.') }}">{{ __('Aplicar') }}</x-ui.button>
         @error('context')
-            <p class="w-full text-xs text-rose-600">{{ $message }}</p>
+            <p class="w-full text-xs text-rose-700 dark:text-rose-300">{{ $message }}</p>
         @enderror
     </div>
 @else
@@ -42,15 +46,15 @@
         </div>
         <div class="min-w-[10rem] flex-1">
             <label for="context-administration" class="block text-xs font-semibold text-slate-700 dark:text-slate-200">{{ __('Administração ativa') }}</label>
-            <x-nexus.searchable-select id="context-administration" wire:model.live="administrationId" class="mt-1" empty-label="—" search-placeholder="{{ __('Buscar administração...') }}" :options="$this->administrations" :disabled="! $regionalId" />
+            <x-nexus.searchable-select id="context-administration" wire:model.live="administrationId" class="mt-1" empty-label="—" search-placeholder="{{ __('Buscar administração...') }}" :options="$this->administrations" :disabled="! $regionalId" :disabled-hint="$regionalId ? null : __('Escolha a regional antes.')" />
         </div>
         <div class="min-w-[10rem] flex-1">
             <label for="context-house" class="block text-xs font-semibold text-slate-700 dark:text-slate-200">{{ __('Casa de oração ativa') }}</label>
-            <x-nexus.searchable-select id="context-house" wire:model.live="prayerHouseId" class="mt-1" empty-label="—" search-placeholder="{{ __('Buscar casa...') }}" label-key="display_label" :options="$this->prayerHouses" :disabled="! $administrationId" />
+            <x-nexus.searchable-select id="context-house" wire:model.live="prayerHouseId" class="mt-1" empty-label="—" search-placeholder="{{ __('Buscar casa...') }}" label-key="display_label" :options="$this->prayerHouses" :disabled="! $administrationId" :disabled-hint="$administrationId ? null : __('Escolha a administração antes da casa.')" />
         </div>
         <x-ui.button type="button" wire:click="apply" size="sm">{{ __('Aplicar contexto') }}</x-ui.button>
         @error('context')
-            <p class="w-full text-xs text-rose-600">{{ $message }}</p>
+            <p class="w-full text-xs text-rose-700 dark:text-rose-300">{{ $message }}</p>
         @enderror
     </div>
 @endif

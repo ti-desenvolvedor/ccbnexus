@@ -364,11 +364,38 @@
     outline-offset: 2px;
 }
 
+/*
+ | Verde, verde escuro e laranja no degrau 600 não seguram texto branco (3,3–3,8:1).
+ | O preenchimento desce um degrau; o texto do link sobe no claro e clareia no escuro.
+ */
+html[data-palette='green'] .bg-primary-600,
+html[data-palette='green_dark'] .bg-primary-600,
+html[data-palette='orange'] .bg-primary-600 {
+    background-color: rgb(var(--color-primary-700) / var(--tw-bg-opacity, 1));
+}
+
+html[data-palette='green'] .hover\:bg-primary-700:hover,
+html[data-palette='green_dark'] .hover\:bg-primary-700:hover,
+html[data-palette='orange'] .hover\:bg-primary-700:hover {
+    background-color: rgb(var(--color-primary-800) / var(--tw-bg-opacity, 1));
+}
+
+html[data-palette='green'] .text-primary-600,
+html[data-palette='green_dark'] .text-primary-600,
+html[data-palette='orange'] .text-primary-600 {
+    color: rgb(var(--color-primary-700) / 1);
+}
+
+html.dark[data-palette='green'] .text-primary-600,
+html.dark[data-palette='green_dark'] .text-primary-600,
+html.dark[data-palette='orange'] .text-primary-600 {
+    color: rgb(var(--color-primary-300) / 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        animation: none !important;
+        transition: none !important;
         scroll-behavior: auto !important;
     }
 }

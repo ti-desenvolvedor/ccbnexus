@@ -1,12 +1,7 @@
 <div>
     <div class="grid gap-8 lg:grid-cols-2 lg:items-center">
         <div>
-            <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                <span class="inline-flex h-2 w-2 rounded-full bg-primary-500"></span>
-                Plataforma modular • Livewire + Tailwind
-            </div>
-
-            <h1 class="mt-4 text-3xl font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100 sm:text-5xl">
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 sm:text-5xl">
                 {{ config('app.name') }}
             </h1>
             <p class="mt-4 max-w-prose text-base leading-relaxed text-slate-600 dark:text-slate-300">
@@ -39,7 +34,7 @@
                 </div>
                 <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
                     <div class="font-semibold">Avisos WhatsApp (manual)</div>
-                    <div class="mt-1 text-sm text-slate-600 dark:text-slate-300">Templates moderados, geração/edição, copiar e `wa.me`.</div>
+                    <div class="mt-1 text-sm text-slate-600 dark:text-slate-300">O texto do aviso é gerado no painel, pode ser revisto e copiado para o WhatsApp.</div>
                 </div>
             </div>
         </div>
