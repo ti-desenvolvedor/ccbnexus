@@ -56,6 +56,11 @@ class BaptismListReport extends Model
         return $this->hasMany(BaptismListReportItem::class)->orderBy('sort_order');
     }
 
+    public function checks(): HasMany
+    {
+        return $this->hasMany(BaptismListReportCheck::class)->orderBy('checked_at');
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

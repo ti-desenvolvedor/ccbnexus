@@ -14,7 +14,7 @@
                     $statusLabel = match ($revision->status) {
                         'ready' => 'Validada',
                         'archived' => 'Arquivada',
-                        default => 'Rascunho',
+                        default => ((int) ($revision->checks_count ?? 0) > 0) ? 'Em conferência' : 'Rascunho',
                     };
                 @endphp
                 <li class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -25,7 +25,7 @@
                                 <span class="ml-2 text-xs font-semibold text-primary-700 dark:text-primary-300">Aberta</span>
                             @endif
                         </p>
-                        <p class="text-sm text-slate-600 dark:text-slate-300">{{ $statusLabel }}@if ($revision->generated_at) · {{ $revision->generated_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }} @endif</p>
+                        <p class="text-sm text-slate-600 dark:text-slate-300">{{ $statusLabel }}@if ($revision->generated_at) · {{ $revision->generated_at->timezone(\App\Services\BaptismListDocumentBlocks::DISPLAY_TIMEZONE)->format('d/m/Y H:i') }} @endif</p>
                     </div>
                     <button type="button" wire:click="selectRevision({{ $revision->id }})" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-800 dark:border-slate-800 dark:text-slate-100">Abrir listagem</button>
                 </li>

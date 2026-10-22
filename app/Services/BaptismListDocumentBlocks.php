@@ -40,6 +40,8 @@ class BaptismListDocumentBlocks
         return $ordered;
     }
 
+    public const DISPLAY_TIMEZONE = 'America/Sao_Paulo';
+
     public static function versionLabel(BaptismListReport $report): string
     {
         $revisionCode = 'R'.sprintf('%02d', (int) $report->revision);
@@ -55,7 +57,7 @@ class BaptismListDocumentBlocks
     {
         $generatedAt = $report->generated_at ?? $report->edition_at;
 
-        return ($generatedAt ?? now())->timezone(config('app.timezone'))->format('d/m/Y H:i');
+        return ($generatedAt ?? now())->timezone(self::DISPLAY_TIMEZONE)->format('d/m/Y H:i');
     }
 
     public static function issueDateLabel(BaptismListReport $report): string

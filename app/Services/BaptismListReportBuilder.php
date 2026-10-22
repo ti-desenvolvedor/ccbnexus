@@ -326,13 +326,12 @@ class BaptismListReportBuilder
                     $defaults
                 );
                 $report->items()->delete();
+                $report->checks()->delete();
                 $meta = array_merge($report->meta ?? [], ['section_periods' => $resolvedPeriods]);
-                $nextStatus = $report->status === BaptismListReport::STATUS_READY
-                    ? BaptismListReport::STATUS_DRAFT
-                    : $report->status;
-                if ($nextStatus === BaptismListReport::STATUS_DRAFT) {
-                    unset($meta['confirmation']);
-                }
+                unset($meta['confirmation'], $meta['publication'], $meta['rejection']);
+                $nextStatus = $report->status === BaptismListReport::STATUS_ARCHIVED
+                    ? BaptismListReport::STATUS_ARCHIVED
+                    : BaptismListReport::STATUS_DRAFT;
                 $report->update([
                     'period_start' => $periodStart,
                     'period_end' => $periodEnd,

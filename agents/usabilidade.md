@@ -46,7 +46,7 @@ Todo campo de escolha usa este componente (listas curtas e longas).
 ## Moderação
 
 - Aprovar/rejeitar: justificativa **obrigatória** + confirmação
-- Confirmar a lista de batismos: justificativa obrigatória; o botão fica bloqueado enquanto houver item visível ainda não publicado
+- Confirmar a lista de batismos: o botão abre um modal para confirmar ou retirar a verificação, sem observação. A aprovação da publicação também é um modal, sem justificativa, e só abre com pelo menos uma verificação. Reprovar pede o motivo do que precisa ser ajustado.
 - Feedback toast/alert imediato
 
 ## Referências

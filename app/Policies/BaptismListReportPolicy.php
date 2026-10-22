@@ -22,7 +22,16 @@ class BaptismListReportPolicy
         return $report->regional !== null && $user->canAccessRegional($report->regional);
     }
 
-    public function confirm(User $user, BaptismListReport $report): bool
+    public function check(User $user, BaptismListReport $report): bool
+    {
+        if (! in_array($report->status, [BaptismListReport::STATUS_DRAFT, BaptismListReport::STATUS_READY], true)) {
+            return false;
+        }
+
+        return $this->view($user, $report);
+    }
+
+    public function approve(User $user, BaptismListReport $report): bool
     {
         if (! $user->canMaintainSecretaria()) {
             return false;
@@ -33,5 +42,10 @@ class BaptismListReportPolicy
         }
 
         return $this->view($user, $report);
+    }
+
+    public function reject(User $user, BaptismListReport $report): bool
+    {
+        return $this->approve($user, $report);
     }
 }

@@ -590,7 +590,7 @@ class BaptismListReportTest extends TestCase
         $this->assertStringContainsString('padding-left: '.\App\Services\BaptismListDocumentLayout::columnPaddingMm().'mm;', $html);
         $this->assertStringContainsString('col-left', $html);
         $this->assertStringContainsString('col-right', $html);
-        $this->assertStringContainsString('Gerado em 19/10/2026 16:20', $html);
+        $this->assertStringContainsString('Gerado em 19/10/2026 13:20', $html);
         $this->assertStringContainsString('Versão validada R00', $html);
         $this->assertStringNotContainsString('border-spacing:', $html);
         $this->assertGreaterThan(1, substr_count($html, 'class="sheet-page"'));
@@ -718,35 +718,94 @@ class BaptismListReportTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_confirming_a_draft_list_marks_it_validated_and_audits(): void
+    public function test_members_mark_the_list_ok_and_their_names_are_kept(): void
     {
         [$regional, $user, $report] = $this->draftBulletin();
+        $user->forceFill(['name' => 'Ana Secretaria'])->save();
+        $second = User::factory()->create([
+            'regional_id' => $regional->id,
+            'name' => 'Paulo Ministério',
+        ]);
+        $second->givePermissionTo('visualizar_relatorios');
 
-        $confirmed = app(BaptismListReportConfirmation::class)->confirm(
-            $report,
+        $confirmation = app(BaptismListReportConfirmation::class);
+        $confirmed = $confirmation->check($report, $user, $regional->id);
+        $confirmed = $confirmation->check($confirmed, $second, $regional->id);
+
+        $this->assertSame(BaptismListReport::STATUS_DRAFT, $confirmed->status);
+        $names = $confirmed->checks()->with('user')->get()->map(fn ($check) => $check->user->name)->sort()->values()->all();
+        $this->assertSame(['Ana Secretaria', 'Paulo Ministério'], $names);
+
+        $withoutChecks = BaptismListReport::query()->findOrFail($report->id);
+        $withoutChecks->checks()->delete();
+        try {
+            app(BaptismListReportConfirmation::class)->approve($withoutChecks, $user, $regional->id);
+            $this->fail('A aprovação saiu sem verificação.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('publication', $exception->errors());
+        }
+
+        try {
+            app(BaptismListReportConfirmation::class)->reject($report->fresh(), $user, 'curto', $regional->id);
+            $this->fail('A reprovação aceitou um motivo curto.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('rejection_reason', $exception->errors());
+        }
+
+        $rejected = app(BaptismListReportConfirmation::class)->reject(
+            $report->fresh(),
             $user,
-            'Lista conferida com a secretaria.',
+            'Ajustar o horário do batismo de Taboão.',
             $regional->id,
         );
+        $this->assertSame(BaptismListReport::STATUS_DRAFT, $rejected->status);
+        $this->assertSame('Ajustar o horário do batismo de Taboão.', $rejected->meta['rejection']['reason'] ?? null);
 
-        $this->assertSame(BaptismListReport::STATUS_READY, $confirmed->status);
-        $this->assertSame('Lista conferida com a secretaria.', $confirmed->meta['confirmation']['justification'] ?? null);
+        $confirmed = app(BaptismListReportConfirmation::class)->check($report->fresh(), $user, $regional->id);
+        $confirmed = app(BaptismListReportConfirmation::class)->check($confirmed, $second, $regional->id);
+        $approved = app(BaptismListReportConfirmation::class)->approve($confirmed, $user, $regional->id);
+
+        $this->assertSame(BaptismListReport::STATUS_READY, $approved->status);
+        $this->assertSame($user->id, $approved->meta['publication']['approved_by'] ?? null);
+        $this->assertArrayNotHasKey('rejection', $approved->meta ?? []);
         $this->assertDatabaseHas('activity_log', [
             'subject_type' => BaptismListReport::class,
             'subject_id' => $report->id,
-            'description' => 'Lista de batismos confirmada',
-            'event' => 'confirmed',
+            'description' => 'Lista de batismos conferida',
+            'event' => 'checked',
+            'causer_id' => $user->id,
+        ]);
+        $this->assertDatabaseHas('activity_log', [
+            'subject_type' => BaptismListReport::class,
+            'subject_id' => $report->id,
+            'description' => 'Lista de batismos aprovada para publicação',
+            'event' => 'approved',
+            'causer_id' => $user->id,
         ]);
 
-        $sections = $confirmed->items->where('is_visible', true)->groupBy('section_key');
+        $sections = $approved->items->where('is_visible', true)->groupBy('section_key');
         $html = view('reports.baptism-list.pdf', [
-            'report' => $confirmed->load(['items', 'regional']),
+            'report' => $approved->load(['items', 'regional']),
             'sections' => $sections,
         ])->render();
         $this->assertStringContainsString('Versão validada R00', $html);
+
+        $confirmation->uncheck($approved, $second, $regional->id);
+        $this->assertSame(BaptismListReport::STATUS_READY, $report->fresh()->status);
+        $this->assertSame(1, $report->checks()->count());
+
+        try {
+            $confirmation->uncheck($report->fresh(), $user, $regional->id);
+            $this->fail('A última verificação saiu de uma lista já aprovada.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('list_check', $exception->errors());
+        }
+
+        $this->assertSame(BaptismListReport::STATUS_READY, $report->fresh()->status);
+        $this->assertSame(1, $report->checks()->count());
     }
 
-    public function test_confirm_refuses_another_regional_and_a_list_already_validated(): void
+    public function test_check_refuses_another_regional(): void
     {
         [$regional, $user, $report] = $this->draftBulletin();
         $other = Regional::query()->create([
@@ -756,71 +815,43 @@ class BaptismListReportTest extends TestCase
         ]);
 
         try {
-            app(BaptismListReportConfirmation::class)->confirm(
-                $report,
-                $user,
-                'Lista conferida com a secretaria.',
-                $other->id,
-            );
-            $this->fail('A confirmação cruzou a regional ativa.');
+            app(BaptismListReportConfirmation::class)->check($report, $user, $other->id);
+            $this->fail('A conferência cruzou a regional ativa.');
         } catch (AuthorizationException) {
             $this->assertSame(BaptismListReport::STATUS_DRAFT, $report->fresh()->status);
+            $this->assertSame(0, $report->checks()->count());
         }
 
-        $report->update(['status' => BaptismListReport::STATUS_READY]);
-
-        try {
-            app(BaptismListReportConfirmation::class)->confirm(
-                $report->fresh(),
-                $user,
-                'Lista conferida com a secretaria.',
-                $regional->id,
-            );
-            $this->fail('Uma lista validada foi confirmada de novo.');
-        } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('confirmation_justification', $exception->errors());
-        }
+        $this->assertNotNull($regional->id);
     }
 
-    public function test_confirm_blocks_visible_pending_items_and_allows_hidden_ones(): void
+    public function test_check_blocks_visible_pending_items_and_allows_hidden_ones(): void
     {
         [$regional, $user, $report] = $this->draftBulletin(pending: true);
         $item = $report->items->first(fn (BaptismListReportItem $row) => ($row->payload['status'] ?? null) === 'pending_approval');
         $this->assertNotNull($item);
 
         try {
-            app(BaptismListReportConfirmation::class)->confirm(
-                $report,
-                $user,
-                'Lista conferida com a secretaria.',
-                $regional->id,
-            );
-            $this->fail('A lista foi confirmada com item pendente visível.');
+            app(BaptismListReportConfirmation::class)->check($report, $user, $regional->id);
+            $this->fail('A lista foi marcada OK com item pendente visível.');
         } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('confirmation_justification', $exception->errors());
+            $this->assertArrayHasKey('list_check', $exception->errors());
         }
 
         $item->update(['is_visible' => false]);
 
-        $confirmed = app(BaptismListReportConfirmation::class)->confirm(
-            $report->fresh(),
-            $user,
-            'Pendente oculto; o restante está conferido.',
-            $regional->id,
-        );
+        $confirmed = app(BaptismListReportConfirmation::class)->check($report->fresh(), $user, $regional->id);
 
-        $this->assertSame(BaptismListReport::STATUS_READY, $confirmed->status);
+        $this->assertSame(BaptismListReport::STATUS_DRAFT, $confirmed->status);
+        $this->assertSame(1, $confirmed->checks()->count());
     }
 
     public function test_resync_of_a_validated_list_returns_it_to_draft(): void
     {
         [$regional, $user, $report] = $this->draftBulletin();
-        app(BaptismListReportConfirmation::class)->confirm(
-            $report,
-            $user,
-            'Lista conferida com a secretaria.',
-            $regional->id,
-        );
+        $confirmation = app(BaptismListReportConfirmation::class);
+        $confirmation->check($report, $user, $regional->id);
+        $confirmation->approve($report->fresh(), $user, $regional->id);
 
         $synced = app(BaptismListReportBuilder::class)->generateOrSync(
             $regional->id,
@@ -830,23 +861,53 @@ class BaptismListReportTest extends TestCase
 
         $this->assertSame($report->id, $synced->id);
         $this->assertSame(BaptismListReport::STATUS_DRAFT, $synced->status);
-        $this->assertArrayNotHasKey('confirmation', $synced->meta ?? []);
+        $this->assertSame(0, $synced->checks()->count());
+        $this->assertArrayNotHasKey('publication', $synced->meta ?? []);
     }
 
-    public function test_page_confirms_the_open_revision_and_hides_the_action_from_viewers(): void
+    public function test_page_records_each_member_ok_and_refuses_another_regional(): void
     {
-        [$regional, $maintainer, $report] = $this->draftBulletin();
-        $maintainer->givePermissionTo('visualizar_relatorios');
+        Carbon::setTestNow(Carbon::parse('2026-10-22 01:29:00', 'UTC'));
 
-        $viewer = User::factory()->create(['regional_id' => $regional->id]);
-        $viewer->givePermissionTo('visualizar_relatorios');
+        [$regional, $first, $report] = $this->draftBulletin();
+        $first->forceFill(['name' => 'Ana Secretaria'])->save();
+        $second = User::factory()->create([
+            'regional_id' => $regional->id,
+            'name' => 'Paulo Ministério',
+        ]);
+        $second->givePermissionTo('visualizar_relatorios');
         session(['nexus.active_regional_id' => $regional->id]);
 
-        Livewire::actingAs($viewer)
+        Livewire::actingAs($first)
             ->test(BaptismListReportPage::class)
-            ->assertDontSee('Confirmar lista')
-            ->call('confirmList')
-            ->assertForbidden();
+            ->assertSee('Marcar verificado')
+            ->assertSee('Nenhuma verificação ainda.')
+            ->assertSee('Falta pelo menos uma verificação')
+            ->assertSee('Confirmar verificação?')
+            ->assertDontSee('Aprovar publicação')
+            ->call('toggleCheck')
+            ->assertSee('Lista marcada como verificada')
+            ->assertSee('Verificado')
+            ->assertSee('Ana Secretaria')
+            ->assertSee('21/10/2026 22:29')
+            ->assertSee('Aprovar publicação')
+            ->call('approvePublication')
+            ->assertSee('Publicação aprovada')
+            ->assertSee('Ana Secretaria');
+
+        Livewire::actingAs($second)
+            ->test(BaptismListReportPage::class)
+            ->assertSee('Ana Secretaria')
+            ->assertSee('Publicação aprovada')
+            ->assertDontSee('Aprovar publicação')
+            ->call('toggleCheck')
+            ->assertSee('Paulo Ministério')
+            ->call('setScreen', 'versoes')
+            ->assertSee('Validada')
+            ->assertSee('Paulo Ministério');
+
+        $this->assertSame(BaptismListReport::STATUS_READY, $report->fresh()->status);
+        $this->assertSame(2, $report->checks()->count());
 
         $other = Regional::query()->create([
             'name' => 'Regional Vizinha',
@@ -854,31 +915,18 @@ class BaptismListReportTest extends TestCase
             'is_active' => true,
         ]);
         $neighbor = User::factory()->create(['regional_id' => $other->id]);
-        $neighbor->givePermissionTo(['visualizar_relatorios', 'editar_evento']);
+        $neighbor->givePermissionTo('visualizar_relatorios');
         session(['nexus.active_regional_id' => $other->id]);
 
         Livewire::actingAs($neighbor)
             ->test(BaptismListReportPage::class)
             ->set('reportId', $report->id)
-            ->set('confirmation_justification', 'Tentativa de outra regional.')
-            ->call('confirmList')
+            ->call('toggleCheck')
             ->assertForbidden();
 
-        $this->assertSame(BaptismListReport::STATUS_DRAFT, $report->fresh()->status);
+        $this->assertSame(2, $report->checks()->count());
 
-        session(['nexus.active_regional_id' => $regional->id]);
-
-        Livewire::actingAs($maintainer)
-            ->test(BaptismListReportPage::class)
-            ->assertSee('Confirmar lista')
-            ->set('confirmation_justification', 'Lista conferida com a secretaria.')
-            ->call('confirmList')
-            ->assertSee('Lista confirmada')
-            ->assertSee('Versão validada R00')
-            ->call('setScreen', 'versoes')
-            ->assertSee('Validada');
-
-        $this->assertSame(BaptismListReport::STATUS_READY, $report->fresh()->status);
+        Carbon::setTestNow();
     }
 
     /**
@@ -897,7 +945,7 @@ class BaptismListReportTest extends TestCase
         $user = User::factory()->create([
             'regional_id' => $regional->id,
         ]);
-        $user->givePermissionTo('editar_evento');
+        $user->givePermissionTo(['editar_evento', 'visualizar_relatorios']);
         $batismo = EventType::query()->where('slug', 'batismo')->firstOrFail();
 
         Event::query()->create([

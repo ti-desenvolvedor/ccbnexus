@@ -5,6 +5,7 @@ namespace App\Livewire\Secretaria;
 use App\Models\BaptismListReport;
 use App\Models\BaptismListReportItem;
 use App\Models\Regional;
+use App\Models\User;
 use App\Services\BaptismListReportBuilder;
 use App\Services\BaptismListReportConfirmation;
 use App\Services\OrganizationalContextService;
@@ -24,7 +25,7 @@ class BaptismListReportPage extends Component
 
     public string $screen = 'listagem';
 
-    public string $confirmation_justification = '';
+    public string $rejection_reason = '';
 
     /** @var array<string, array{from: string, to: string}> */
     public array $sectionFilters = [];
@@ -166,20 +167,51 @@ class BaptismListReportPage extends Component
         session()->flash('status', __('Lista gerada (R'.$report->revision.').'));
     }
 
-    public function confirmList(BaptismListReportConfirmation $confirmation, OrganizationalContextService $context): void
+    public function toggleCheck(BaptismListReportConfirmation $confirmation, OrganizationalContextService $context): void
     {
         $report = $this->currentReport();
         abort_unless($report, 404);
-        $this->authorize('confirm', $report);
-        $confirmed = $confirmation->confirm(
+        $this->authorize('check', $report);
+        $user = auth()->user();
+        $already = $report->checks->contains(fn ($check) => (int) $check->user_id === (int) $user->id);
+        if ($already) {
+            $confirmation->uncheck($report, $user, $context->activeRegionalId());
+            session()->flash('status', __('Sua verificação foi retirada.'));
+
+            return;
+        }
+
+        $confirmation->check($report, $user, $context->activeRegionalId());
+        session()->flash('status', __('Lista marcada como verificada.'));
+    }
+
+    public function approvePublication(BaptismListReportConfirmation $confirmation, OrganizationalContextService $context): void
+    {
+        $report = $this->currentReport();
+        abort_unless($report, 404);
+        $this->authorize('approve', $report);
+        $confirmation->approve(
             $report,
             auth()->user(),
-            $this->confirmation_justification,
             $context->activeRegionalId(),
         );
-        $this->confirmation_justification = '';
-        $this->reportId = $confirmed->id;
-        session()->flash('status', __('Lista confirmada (R'.sprintf('%02d', $confirmed->revision).').'));
+        session()->flash('status', __('Publicação aprovada.'));
+    }
+
+    public function rejectPublication(BaptismListReportConfirmation $confirmation, OrganizationalContextService $context): void
+    {
+        $report = $this->currentReport();
+        abort_unless($report, 404);
+        $this->authorize('reject', $report);
+        $confirmation->reject(
+            $report,
+            auth()->user(),
+            $this->rejection_reason,
+            $context->activeRegionalId(),
+        );
+        $this->rejection_reason = '';
+        $this->dispatch('baptism-rejected');
+        session()->flash('status', __('Lista reprovada. O ajuste ficou registrado.'));
     }
 
     public function toggleItem(int $itemId): void
@@ -250,24 +282,63 @@ class BaptismListReportPage extends Component
                 ->where('regional_id', $regionalId)
                 ->orderByDesc('issue_date')
                 ->orderByDesc('revision')
-                ->get(['id', 'issue_date', 'revision', 'status', 'generated_at'])
+                ->withCount('checks')
+                ->get()
             : collect();
         $pendingItems = $report
             ? $report->items->filter(fn (BaptismListReportItem $item) => ($item->payload['status'] ?? null) === 'pending_approval')->values()
             : collect();
         $visiblePending = $pendingItems->filter(fn (BaptismListReportItem $item) => $item->is_visible)->values();
-        $canMaintainSecretaria = (bool) auth()->user()?->canMaintainSecretaria();
-        $canConfirmList = $report
-            && $canMaintainSecretaria
+        $canCheckList = $report
+            && $regionalId
+            && (int) $report->regional_id === (int) $regionalId
+            && in_array($report->status, [BaptismListReport::STATUS_DRAFT, BaptismListReport::STATUS_READY], true)
+            && (auth()->user()?->isSuperAdmin() || auth()->user()?->can('visualizar_relatorios'));
+        $checkedByMe = $report
+            ? $report->checks->contains(fn ($check) => (int) $check->user_id === (int) auth()->id())
+            : false;
+        $canApprovePublication = $report
             && $report->status === BaptismListReport::STATUS_DRAFT
             && $regionalId
-            && (int) $report->regional_id === (int) $regionalId;
+            && (int) $report->regional_id === (int) $regionalId
+            && (auth()->user()?->canMaintainSecretaria() ?? false);
+        $publication = is_array($report?->meta['publication'] ?? null) ? $report->meta['publication'] : null;
+        $approverName = null;
+        $approvedAtLabel = null;
+        if (is_array($publication) && ! empty($publication['approved_by'])) {
+            $approverName = User::query()->whereKey($publication['approved_by'])->value('name');
+            if (! empty($publication['approved_at'])) {
+                $approvedAtLabel = Carbon::parse($publication['approved_at'])
+                    ->timezone(\App\Services\BaptismListDocumentBlocks::DISPLAY_TIMEZONE)
+                    ->format('d/m/Y H:i');
+            }
+        }
+        $rejection = is_array($report?->meta['rejection'] ?? null) ? $report->meta['rejection'] : null;
+        $rejectionReason = is_array($rejection) ? (string) ($rejection['reason'] ?? '') : '';
+        $rejectorName = null;
+        $rejectedAtLabel = null;
+        if (is_array($rejection) && ! empty($rejection['rejected_by'])) {
+            $rejectorName = User::query()->whereKey($rejection['rejected_by'])->value('name');
+            if (! empty($rejection['rejected_at'])) {
+                $rejectedAtLabel = Carbon::parse($rejection['rejected_at'])
+                    ->timezone(\App\Services\BaptismListDocumentBlocks::DISPLAY_TIMEZONE)
+                    ->format('d/m/Y H:i');
+            }
+        }
 
         return view('livewire.secretaria.baptism-list-report-page', [
             'report' => $report,
             'revisions' => $revisions,
             'pendingItems' => $pendingItems,
-            'canConfirmList' => $canConfirmList,
+            'checks' => $report?->checks ?? collect(),
+            'canCheckList' => $canCheckList,
+            'checkedByMe' => $checkedByMe,
+            'canApprovePublication' => $canApprovePublication,
+            'approverName' => $approverName,
+            'approvedAtLabel' => $approvedAtLabel,
+            'rejectionReason' => $rejectionReason,
+            'rejectorName' => $rejectorName,
+            'rejectedAtLabel' => $rejectedAtLabel,
             'confirmationBlocked' => $visiblePending->isNotEmpty(),
             'displayBlocks' => $report ? $this->buildDisplayBlocks($grouped) : [],
             'periodHint' => $periodHint,
@@ -374,7 +445,11 @@ class BaptismListReportPage extends Component
     protected function currentReport(): ?BaptismListReport
     {
         return $this->reportId
-            ? BaptismListReport::query()->with(['items', 'regional'])->find($this->reportId)
+            ? BaptismListReport::query()->with([
+                'items',
+                'regional',
+                'checks.user',
+            ])->find($this->reportId)
             : null;
     }
 
