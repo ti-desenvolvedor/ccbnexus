@@ -73,7 +73,7 @@ class OfficeOverview
 
             $weekEvents = $this->mapEvents(
                 $this->datedEvents($user, $regionalId)
-                    ->with(['location:id,name', 'eventType:id,name', 'roleAssignments.roleTemplate:id,slug', 'roleAssignments.user:id,name'])
+                    ->with(['location:id,name', 'eventType:id,name,slug', 'roleAssignments.roleTemplate:id,slug', 'roleAssignments.user:id,name'])
                     ->whereBetween('starts_at', [$weekStart, $weekEnd])
                     ->orderBy('starts_at')
                     ->limit(40)
@@ -83,7 +83,7 @@ class OfficeOverview
 
             $upcomingEvents = $this->mapEvents(
                 $this->datedEvents($user, $regionalId)
-                    ->with(['location:id,name', 'eventType:id,name', 'roleAssignments.roleTemplate:id,slug', 'roleAssignments.user:id,name'])
+                    ->with(['location:id,name', 'eventType:id,name,slug', 'roleAssignments.roleTemplate:id,slug', 'roleAssignments.user:id,name'])
                     ->where('starts_at', '>', $weekEnd)
                     ->where('starts_at', '<=', $upcomingEnd)
                     ->orderBy('starts_at')
@@ -197,44 +197,16 @@ class OfficeOverview
                 ->count();
         }
 
-        $generatedLists = [];
-        $confirmedLists = [];
+        $pendingLists = [];
+        $approvedLists = [];
         if ($canSeeLists && $regionalId) {
-            $lists = BaptismListReport::query()
-                ->withCount('items')
-                ->where('regional_id', $regionalId);
-            $generatedLists = (clone $lists)
-                ->orderByRaw('COALESCE(generated_at, created_at) DESC')
-                ->orderByDesc('id')
-                ->limit(2)
-                ->get()
-                ->map(fn (BaptismListReport $report) => $this->listRow($report))
-                ->all();
-            $confirmedLists = (clone $lists)
-                ->where('status', BaptismListReport::STATUS_READY)
-                ->orderByRaw('COALESCE(generated_at, created_at) DESC')
-                ->orderByDesc('id')
-                ->limit(2)
-                ->get()
-                ->map(fn (BaptismListReport $report) => $this->listRow($report))
-                ->all();
+            [$pendingLists, $approvedLists] = $this->baptismListSummaries(
+                BaptismListReport::query()->withCount('items')->where('regional_id', $regionalId)
+            );
         } elseif ($canSeeLists) {
-            $lists = $this->lists($user, null)->withCount('items');
-            $generatedLists = (clone $lists)
-                ->orderByRaw('COALESCE(generated_at, created_at) DESC')
-                ->orderByDesc('id')
-                ->limit(2)
-                ->get()
-                ->map(fn (BaptismListReport $report) => $this->listRow($report))
-                ->all();
-            $confirmedLists = (clone $lists)
-                ->where('status', BaptismListReport::STATUS_READY)
-                ->orderByRaw('COALESCE(generated_at, created_at) DESC')
-                ->orderByDesc('id')
-                ->limit(2)
-                ->get()
-                ->map(fn (BaptismListReport $report) => $this->listRow($report))
-                ->all();
+            [$pendingLists, $approvedLists] = $this->baptismListSummaries(
+                $this->lists($user, null)->withCount('items')
+            );
         }
 
         $weekCount = $canSeeEvents
@@ -258,8 +230,8 @@ class OfficeOverview
             'ministryRemainder' => max(0, $ministryCount - count($ministryChart)),
             'eventStatus' => $eventStatus,
             'confirmedPresences' => $confirmedPresences,
-            'generatedLists' => $generatedLists,
-            'confirmedLists' => $confirmedLists,
+            'pendingLists' => $pendingLists,
+            'approvedLists' => $approvedLists,
             'reservations' => $reservationRows,
             'secretariaLinks' => $this->secretariaLinksFor($user),
             'canCreateEvent' => $user->can('create', Event::class),
@@ -342,6 +314,7 @@ class OfficeOverview
                 'when' => $event->starts_at->locale('pt_BR')->translatedFormat('D d/m · H:i'),
                 'place' => $event->location?->name,
                 'type' => $event->eventType?->name,
+                'showStatus' => ! in_array(mb_strtolower((string) ($event->eventType?->slug ?? $event->eventType?->name ?? '')), ['batismo'], true),
                 'attendant' => $event->attendantLabel(),
                 'status' => $event->statusLabel(),
                 'tone' => $event->statusTone(),
@@ -518,6 +491,30 @@ class OfficeOverview
     }
 
     /**
+     * @return array{0: list<array<string, mixed>>, 1: list<array<string, mixed>>}
+     */
+    private function baptismListSummaries(Builder $lists): array
+    {
+        $order = function (Builder $query): Builder {
+            return $query
+                ->orderByRaw('COALESCE(generated_at, created_at) DESC')
+                ->orderByDesc('id')
+                ->limit(5);
+        };
+
+        $pending = $order((clone $lists)->where('status', BaptismListReport::STATUS_DRAFT))
+            ->get()
+            ->map(fn (BaptismListReport $report) => $this->listRow($report))
+            ->all();
+        $approved = $order((clone $lists)->where('status', BaptismListReport::STATUS_READY))
+            ->get()
+            ->map(fn (BaptismListReport $report) => $this->listRow($report))
+            ->all();
+
+        return [$pending, $approved];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function listRow(BaptismListReport $report): array
@@ -532,14 +529,14 @@ class OfficeOverview
             'when' => $report->generated_at?->locale('pt_BR')->translatedFormat('d/m/Y H:i') ?? 'sem data de geração',
             'itemsLabel' => $items === 1 ? '1 item' : $items.' itens',
             'status' => match ($report->status) {
-                BaptismListReport::STATUS_READY => 'Confirmada',
+                BaptismListReport::STATUS_READY => 'Aprovada',
                 BaptismListReport::STATUS_ARCHIVED => 'Arquivada',
-                default => 'Gerada',
+                default => 'Para aprovação',
             },
             'tone' => match ($report->status) {
                 BaptismListReport::STATUS_READY => 'success',
                 BaptismListReport::STATUS_ARCHIVED => 'neutral',
-                default => 'info',
+                default => 'warning',
             },
             'href' => route('secretaria.baptism-list'),
         ];

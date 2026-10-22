@@ -95,6 +95,22 @@ class OfficeWeekDashboardTest extends TestCase
             'is_active' => true,
             'sort_order' => 1,
         ]);
+        $baptism = EventType::query()->create([
+            'name' => 'Batismo',
+            'slug' => 'batismo',
+            'is_active' => true,
+            'sort_order' => 2,
+        ]);
+        Event::query()->create([
+            'regional_id' => $regional->id,
+            'title' => 'Batismo TBS',
+            'event_type_id' => $baptism->id,
+            'starts_at' => now()->startOfWeek(Carbon::SUNDAY)->addDay()->setTime(18, 30),
+            'ends_at' => now()->startOfWeek(Carbon::SUNDAY)->addDay()->setTime(20, 0),
+            'status' => 'published',
+            'is_occurrence' => false,
+            'created_by' => $user->id,
+        ]);
         Event::query()->create([
             'regional_id' => $regional->id,
             'title' => 'Ensaio da semana que vem',
@@ -147,24 +163,33 @@ class OfficeWeekDashboardTest extends TestCase
 
         session(['nexus.active_regional_id' => $regional->id]);
 
-        Livewire::actingAs($user)
+        $component = Livewire::actingAs($user)
             ->test(Metrics::class)
             ->call('refresh')
             ->assertSee('Ensaio da semana que vem')
+            ->assertSee('Batismo TBS')
             ->assertSee('Cadastros')
             ->assertSee('Ancião')
             ->assertSee('Diácono')
             ->assertSee('Sem cargo')
             ->assertSee('15/10/2026')
             ->assertSee('08/10/2026')
-            ->assertDontSee('01/10/2026')
+            ->assertSee('01/10/2026')
             ->assertSee('Revisão 4')
             ->assertSee('Revisão 3')
-            ->assertDontSee('Revisão 2')
+            ->assertSee('Revisão 2')
             ->assertSee('Revisão 7')
-            ->assertSee('Confirmada')
-            ->assertSee('Últimas geradas')
-            ->assertSee('Últimas confirmadas');
+            ->assertSee('Aprovada')
+            ->assertSee('Para aprovação')
+            ->assertSee('Aprovadas')
+            ->assertDontSee('Últimas geradas')
+            ->assertDontSee('Últimas confirmadas')
+            ->assertDontSee('Confirmada')
+            ->tap(function ($component) {
+                $baptism = collect($component->get('panel')['weekEvents'])->firstWhere('title', 'Batismo TBS');
+                $this->assertNotNull($baptism);
+                $this->assertFalse($baptism['showStatus']);
+            });
     }
 
     public function test_event_list_filters_by_portuguese_status_and_names_the_empty_context(): void

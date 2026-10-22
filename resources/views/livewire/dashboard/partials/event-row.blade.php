@@ -18,5 +18,7 @@
             @endif
         </p>
     </div>
-    <x-ui.badge :tone="$event['tone']">{{ $event['status'] }}</x-ui.badge>
+    @if ($event['showStatus'] ?? true)
+        <x-ui.badge :tone="$event['tone']">{{ $event['status'] }}</x-ui.badge>
+    @endif
 </li>

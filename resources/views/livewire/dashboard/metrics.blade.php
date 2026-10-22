@@ -140,14 +140,14 @@
                     </div>
                     <div class="mt-3 grid gap-6 lg:grid-cols-2">
                         @include('livewire.dashboard.partials.report-list', [
-                            'title' => 'Últimas geradas',
-                            'empty' => 'Nenhuma lista gerada neste recorte.',
-                            'reports' => $panel['generatedLists'],
+                            'title' => 'Para aprovação',
+                            'empty' => 'Nenhuma lista à espera de aprovação.',
+                            'reports' => $panel['pendingLists'],
                         ])
                         @include('livewire.dashboard.partials.report-list', [
-                            'title' => 'Últimas confirmadas',
-                            'empty' => 'Nenhuma lista confirmada. A versão validada aparece aqui.',
-                            'reports' => $panel['confirmedLists'],
+                            'title' => 'Aprovadas',
+                            'empty' => 'Nenhuma lista aprovada.',
+                            'reports' => $panel['approvedLists'],
                         ])
                     </div>
                 </section>
