@@ -28,14 +28,23 @@
                 <label class="text-xs font-semibold text-slate-500">Data da lista</label>
                 <input type="date" wire:model.live="issue_date" class="mt-1 block min-h-11 w-full min-w-[11.5rem] rounded-xl border border-slate-200 px-3 py-2 text-sm sm:w-auto dark:border-slate-800 dark:bg-slate-950" />
             </div>
-            <button type="button" wire:click="generate" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl bg-primary-600 px-4 py-2 text-center text-sm font-semibold leading-snug text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Gerar / atualizar</button>
-            <button type="button" wire:click="generateNewRevision" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl border border-slate-200 px-4 py-2 text-center text-sm font-semibold leading-snug focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800">Nova revisão Rn</button>
-            <button type="button" wire:click="resetSectionFilters" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl border border-slate-200 px-4 py-2 text-center text-sm font-semibold leading-snug focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800">Restaurar períodos padrão</button>
+            @if ($report)
+                <button type="button" x-data x-on:click="$dispatch('open-modal', 'baptism-regenerate')" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl bg-primary-600 px-4 py-2 text-center text-sm font-semibold leading-snug text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Gerar / atualizar</button>
+                <button type="button" x-data x-on:click="$dispatch('open-modal', 'baptism-new-revision')" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl border border-slate-200 px-4 py-2 text-center text-sm font-semibold leading-snug focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800">Nova revisão Rn</button>
+                <button type="button" x-data x-on:click="$dispatch('open-modal', 'baptism-reset-periods')" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl border border-slate-200 px-4 py-2 text-center text-sm font-semibold leading-snug focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800">Restaurar períodos padrão</button>
+            @else
+                <button type="button" wire:click="generate" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl bg-primary-600 px-4 py-2 text-center text-sm font-semibold leading-snug text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Gerar / atualizar</button>
+                <button type="button" wire:click="generateNewRevision" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl border border-slate-200 px-4 py-2 text-center text-sm font-semibold leading-snug focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800">Nova revisão Rn</button>
+                <button type="button" wire:click="resetSectionFilters" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl border border-slate-200 px-4 py-2 text-center text-sm font-semibold leading-snug focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800">Restaurar períodos padrão</button>
+            @endif
             @if ($report)
                 <a href="{{ route('secretaria.baptism-list.pdf', $report) }}" target="_blank" rel="noopener" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl border border-slate-200 px-4 py-2 text-center text-sm font-semibold leading-snug focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800">Baixar PDF</a>
                 <a href="{{ route('secretaria.baptism-list.docx', $report) }}" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-xl border border-slate-200 px-4 py-2 text-center text-sm font-semibold leading-snug focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800">Baixar Word</a>
             @endif
         </div>
+        @if ($report)
+            @include('livewire.secretaria.partials.baptism-list-generate-confirm')
+        @endif
     </div>
 
     @if (session('status'))
@@ -107,7 +116,7 @@
                                 <label class="block text-[10px] font-semibold uppercase text-slate-500">Até</label>
                                 <input type="date" wire:model="sectionFilters.{{ $section }}.to" class="mt-0.5 min-h-11 w-full min-w-[11.5rem] rounded-lg border border-slate-200 px-3 py-2 sm:w-auto dark:border-slate-800 dark:bg-slate-950" />
                             </div>
-                            <button type="button" wire:click="applySectionFilter('{{ $section }}')" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg bg-slate-900 px-4 py-2 text-center font-semibold leading-snug text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:bg-slate-100 dark:text-slate-900">Aplicar período</button>
+                            <button type="button" x-data x-on:click="$wire.periodSection = @js($section); $dispatch('open-modal', 'baptism-apply-period')" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg bg-slate-900 px-4 py-2 text-center font-semibold leading-snug text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:bg-slate-100 dark:text-slate-900">Aplicar período</button>
                         @endif
                         @if ($isRegionalMeetings)
                             <button type="button" wire:click="hideRegionalMeetings" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg px-3 py-2 text-center font-semibold leading-snug underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Ocultar secção</button>

@@ -46,7 +46,7 @@ Todo campo de escolha usa este componente (listas curtas e longas).
 ## Moderação
 
 - Aprovar/rejeitar: justificativa **obrigatória** + confirmação
-- Confirmar a lista de batismos: o botão abre um modal para confirmar ou retirar a verificação, sem observação. A aprovação da publicação também é um modal, sem justificativa, e só abre com pelo menos uma verificação. Reprovar pede o motivo do que precisa ser ajustado.
+- Confirmar a lista de batismos: cabeçalho com fundo clarinho (verde na confirmação, vermelho na negação) e título na cor de texto normal; no escuro o cartão fica escuro e o cabeçalho usa um tom fundo da mesma cor, sem texto claro sobre fundo claro. Corpo com ícone grande à esquerda e o texto à direita. Rodapé com Cancelar e a ação. Verificar e aprovar não pedem observação. Reprovar pede o que precisa ser ajustado. Nova revisão, atualizar a lista, aplicar período e restaurar períodos pedem confirmação porque refazem a revisão. Ocultar ou mostrar item ou secção não pede, porque desfaz no mesmo botão.
 - Feedback toast/alert imediato
 
 ## Referências

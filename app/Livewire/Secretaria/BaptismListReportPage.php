@@ -27,6 +27,8 @@ class BaptismListReportPage extends Component
 
     public string $rejection_reason = '';
 
+    public string $periodSection = '';
+
     /** @var array<string, array{from: string, to: string}> */
     public array $sectionFilters = [];
 
@@ -136,6 +138,15 @@ class BaptismListReportPage extends Component
             "sectionFilters.{$sectionKey}.to" => ['required', 'date', 'after_or_equal:sectionFilters.'.$sectionKey.'.from'],
         ]);
         $this->runGenerate($builder, $context, false);
+    }
+
+    public function confirmApplySection(BaptismListReportBuilder $builder, OrganizationalContextService $context): void
+    {
+        if ($this->periodSection === '') {
+            return;
+        }
+
+        $this->applySectionFilter($this->periodSection, $builder, $context);
     }
 
     public function resetSectionFilters(BaptismListReportBuilder $builder, OrganizationalContextService $context): void
