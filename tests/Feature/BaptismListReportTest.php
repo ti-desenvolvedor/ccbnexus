@@ -577,9 +577,10 @@ class BaptismListReportTest extends TestCase
             'sections' => $sections,
         ])->render();
 
-        $this->assertStringContainsString('margin: 10mm 14mm 16mm 14mm;', $html);
-        $this->assertStringContainsString('padding-right: 4mm;', $html);
-        $this->assertStringContainsString('padding-left: 4mm;', $html);
+        $this->assertStringContainsString(\App\Services\BaptismListDocumentLayout::marginCss(), $html);
+        $this->assertStringContainsString('font-size: '.\App\Services\BaptismListDocumentLayout::BODY_PT.'pt;', $html);
+        $this->assertStringContainsString('padding-right: '.\App\Services\BaptismListDocumentLayout::columnPaddingMm().'mm;', $html);
+        $this->assertStringContainsString('padding-left: '.\App\Services\BaptismListDocumentLayout::columnPaddingMm().'mm;', $html);
         $this->assertStringContainsString('col-left', $html);
         $this->assertStringContainsString('col-right', $html);
         $this->assertStringContainsString('Gerado em 19/10/2026 16:20', $html);
@@ -697,6 +698,7 @@ class BaptismListReportTest extends TestCase
         $this->assertStringContainsString('Batismo com Libras', $xml);
         $this->assertStringContainsString('Lista de Batismos e Diversos', $xml);
         $this->assertStringContainsString('w:line="240"', $xml);
+        $this->assertStringContainsString('w:val="17"', $xml);
         $this->assertStringNotContainsString('w:line="480"', $xml);
         $this->assertSame(1, substr_count($xml, '<w:sectPr'));
         $this->assertStringContainsString('w:num="2"', $xml);

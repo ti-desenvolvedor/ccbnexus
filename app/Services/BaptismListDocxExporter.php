@@ -19,15 +19,13 @@ use PhpOffice\PhpWord\Style\Table;
 
 class BaptismListDocxExporter
 {
-    private const FONT = 'Arial Narrow';
-
     private int $columnWidth;
 
     public function __construct()
     {
-        $page = (int) Converter::cmToTwip(21.0);
-        $side = (int) Converter::cmToTwip(1.4);
-        $gap = (int) Converter::cmToTwip(0.8);
+        $page = (int) Converter::cmToTwip(BaptismListDocumentLayout::PAGE_WIDTH_CM);
+        $side = (int) Converter::cmToTwip(BaptismListDocumentLayout::MARGIN_SIDE_CM);
+        $gap = (int) Converter::cmToTwip(BaptismListDocumentLayout::COLUMN_GAP_CM);
         $this->columnWidth = (int) floor(($page - (2 * $side) - $gap) / 2);
     }
 
@@ -49,25 +47,25 @@ class BaptismListDocxExporter
     public function document(BaptismListReport $report, array $sections): PhpWord
     {
         $phpWord = new PhpWord;
-        $phpWord->setDefaultFontName(self::FONT);
-        $phpWord->setDefaultFontSize(9.5);
+        $phpWord->setDefaultFontName(BaptismListDocumentLayout::FONT);
+        $phpWord->setDefaultFontSize(BaptismListDocumentLayout::BODY_PT);
         $phpWord->setDefaultParagraphStyle($this->paragraph());
         $phpWord->getSettings()->setThemeFontLang(new Language('pt-BR'));
 
         $page = [
-            'pageSizeW' => Converter::cmToTwip(21.0),
-            'pageSizeH' => Converter::cmToTwip(29.7),
-            'marginTop' => Converter::cmToTwip(1.0),
-            'marginBottom' => Converter::cmToTwip(1.6),
-            'marginLeft' => Converter::cmToTwip(1.4),
-            'marginRight' => Converter::cmToTwip(1.4),
-            'marginHeader' => Converter::cmToTwip(0.4),
-            'marginFooter' => Converter::cmToTwip(0.4),
+            'pageSizeW' => Converter::cmToTwip(BaptismListDocumentLayout::PAGE_WIDTH_CM),
+            'pageSizeH' => Converter::cmToTwip(BaptismListDocumentLayout::PAGE_HEIGHT_CM),
+            'marginTop' => Converter::cmToTwip(BaptismListDocumentLayout::MARGIN_TOP_CM),
+            'marginBottom' => Converter::cmToTwip(BaptismListDocumentLayout::MARGIN_BOTTOM_CM),
+            'marginLeft' => Converter::cmToTwip(BaptismListDocumentLayout::MARGIN_SIDE_CM),
+            'marginRight' => Converter::cmToTwip(BaptismListDocumentLayout::MARGIN_SIDE_CM),
+            'marginHeader' => Converter::cmToTwip(BaptismListDocumentLayout::MARGIN_HEADER_CM),
+            'marginFooter' => Converter::cmToTwip(BaptismListDocumentLayout::MARGIN_FOOTER_CM),
         ];
 
         $body = $phpWord->addSection($page + [
             'colsNum' => 2,
-            'colsSpace' => Converter::cmToTwip(0.8),
+            'colsSpace' => Converter::cmToTwip(BaptismListDocumentLayout::COLUMN_GAP_CM),
         ]);
         $this->addContinuationHeader($body, $report);
         $this->addFooter($body, $report);
@@ -92,24 +90,24 @@ class BaptismListDocxExporter
         if ($isDraft) {
             $section->addText(
                 'PROVISÓRIA - EM CONFIRMAÇÃO',
-                $this->font(9.5, true, '006600'),
+                $this->font(BaptismListDocumentLayout::BODY_PT, true, '006600'),
                 $this->paragraph(['alignment' => 'center', 'spaceAfter' => 40])
             );
         }
 
         $section->addText(
             'Congregação Cristã no Brasil',
-            $this->font(14, true),
+            $this->font(BaptismListDocumentLayout::TITLE_PT, true),
             $this->paragraph(['alignment' => 'center'])
         );
         $regional = trim((string) ($report->regional?->name ?? ''));
         if ($regional !== '') {
-            $section->addText($regional, $this->font(11, true), $this->paragraph(['alignment' => 'center']));
+            $section->addText($regional, $this->font(BaptismListDocumentLayout::SUB_PT, true), $this->paragraph(['alignment' => 'center']));
         }
         $section->addText(
             'Lista de Batismos e Diversos – '.BaptismListDocumentBlocks::issueDateLabel($report),
-            $this->font(11, true),
-            $this->paragraph(['alignment' => 'center', 'spaceAfter' => 80])
+            $this->font(BaptismListDocumentLayout::SUB_PT, true),
+            $this->paragraph(['alignment' => 'center', 'spaceAfter' => 40])
         );
     }
 
@@ -119,7 +117,7 @@ class BaptismListDocxExporter
         $section->addHeader(Footer::FIRST);
         $section->addHeader()->addText(
             'Lista de Batismos e Diversos – '.$regional.' – continua',
-            $this->font(8, true),
+            $this->font(BaptismListDocumentLayout::META_PT, true),
             $this->paragraph(['alignment' => 'center', 'spaceAfter' => 60])
         );
     }
@@ -127,11 +125,12 @@ class BaptismListDocxExporter
     private function addFooter(Section $section, BaptismListReport $report): void
     {
         $footer = $section->addFooter();
-        $usable = (int) Converter::cmToTwip(21.0) - (2 * (int) Converter::cmToTwip(1.4));
+        $usable = (int) Converter::cmToTwip(BaptismListDocumentLayout::PAGE_WIDTH_CM)
+            - (2 * (int) Converter::cmToTwip(BaptismListDocumentLayout::MARGIN_SIDE_CM));
         $left = (int) round($usable * 0.50);
         $mid = (int) round($usable * 0.22);
         $right = $usable - $left - $mid;
-        $font = $this->font(8);
+        $font = $this->font(BaptismListDocumentLayout::META_PT);
         $table = $footer->addTable([
             'layout' => Table::LAYOUT_FIXED,
             'width' => $usable,
@@ -202,7 +201,7 @@ class BaptismListDocxExporter
                 if (($item['title'] ?? '') !== '') {
                     $section->addText(
                         (string) $item['title'],
-                        $this->font(9.5, true),
+                        $this->font(BaptismListDocumentLayout::HEADING_PT, true),
                         $this->paragraph(['alignment' => 'center', 'spaceBefore' => 60])
                     );
                 }
@@ -274,7 +273,7 @@ class BaptismListDocxExporter
             'layout' => Table::LAYOUT_FIXED,
             'width' => $this->columnWidth,
             'unit' => TblWidth::TWIP,
-            'cellMargin' => 20,
+            'cellMargin' => 12,
         ]);
 
         foreach ($rows as $row) {
@@ -296,7 +295,7 @@ class BaptismListDocxExporter
             'layout' => Table::LAYOUT_FIXED,
             'width' => $this->columnWidth,
             'unit' => TblWidth::TWIP,
-            'cellMargin' => 20,
+            'cellMargin' => 12,
         ]);
         $table->addRow();
         $cell = $table->addCell($this->columnWidth, [
@@ -305,7 +304,7 @@ class BaptismListDocxExporter
             'borderColor' => '000000',
             'valign' => 'center',
         ]);
-        $cell->addText($text, $this->font(10, true), $this->paragraph([
+        $cell->addText($text, $this->font(BaptismListDocumentLayout::HEADING_PT, true), $this->paragraph([
             'alignment' => 'center',
             'spaceBefore' => 20,
             'spaceAfter' => 20,
@@ -337,7 +336,7 @@ class BaptismListDocxExporter
             if ($index > 0) {
                 $run->addTextBreak();
             }
-            $run->addText(str_replace('-', "\u{2011}", $line), $this->font(9.5));
+            $run->addText(str_replace('-', "\u{2011}", $line), $this->font(BaptismListDocumentLayout::BODY_PT));
         }
         if (empty($row['libras']) || ! empty($row['wide'])) {
             return;
@@ -345,7 +344,7 @@ class BaptismListDocxExporter
 
         $icon = BaptismListDocumentBlocks::librasIconPath();
         if (! is_file($icon)) {
-            $run->addText(' (Libras)', $this->font(9.5, false, null, true));
+            $run->addText(' (Libras)', $this->font(BaptismListDocumentLayout::BODY_PT, false, null, true));
 
             return;
         }
@@ -465,7 +464,7 @@ class BaptismListDocxExporter
             if ($child->nodeType === XML_TEXT_NODE) {
                 $text = $child->textContent ?? '';
                 if ($text !== '') {
-                    $run->addText($text, $this->font(9.5, (bool) ($style['bold'] ?? false), null, (bool) ($style['italic'] ?? false), (bool) ($style['underline'] ?? false)));
+                    $run->addText($text, $this->font(BaptismListDocumentLayout::BODY_PT, (bool) ($style['bold'] ?? false), null, (bool) ($style['italic'] ?? false), (bool) ($style['underline'] ?? false)));
                 }
 
                 continue;
@@ -502,17 +501,17 @@ class BaptismListDocxExporter
             'spaceAfter' => 0,
             // PhpWord soma 240 ao valor de spacing quando a regra é auto.
             // lineHeight 1 vira w:line="240" (entrelinha simples).
-            'lineHeight' => 1,
+            'lineHeight' => BaptismListDocumentLayout::LINE_HEIGHT,
         ];
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function font(float $size = 9.5, bool $bold = false, ?string $color = null, bool $italic = false, bool $underline = false): array
+    private function font(float $size = BaptismListDocumentLayout::BODY_PT, bool $bold = false, ?string $color = null, bool $italic = false, bool $underline = false): array
     {
         $font = [
-            'name' => self::FONT,
+            'name' => BaptismListDocumentLayout::FONT,
             'size' => $size,
         ];
         if ($bold) {

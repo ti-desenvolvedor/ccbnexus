@@ -12,6 +12,9 @@ class EventRecurrenceService
 {
     public const MAX_YEARLY_CHILD_OCCURRENCES = 100;
 
+    /** Cobre o ano da série e o ano seguinte (semanal). */
+    public const MAX_WEEKLY_CHILD_OCCURRENCES = 120;
+
     public function __construct(
         protected MonthlyNthRecurrencePlanner $monthlyNth,
         protected YearlyRecurrencePlanner $yearly,
@@ -70,7 +73,7 @@ class EventRecurrenceService
         $start = Carbon::parse($startsAt);
         $until = Carbon::parse($untilDate)->endOfDay();
         $cursor = $start->copy()->addWeeks($intervalWeeks);
-        $max = 52;
+        $max = $this->weeklyLimit($start, $until, $intervalWeeks);
         $n = 0;
 
         while ($cursor->lte($until) && $n < $max) {
@@ -185,7 +188,7 @@ class EventRecurrenceService
             $until = Carbon::parse($event->recurrence_until)->endOfDay();
             $intervalWeeks = max(1, min(12, (int) ($event->recurrence_interval_weeks ?? 1)));
             $cursor = $start->copy()->addWeeks($intervalWeeks);
-            $max = 52;
+            $max = $this->weeklyLimit($start, $until, $intervalWeeks);
             $n = 0;
 
             while ($cursor->lte($until) && $n < $max) {
@@ -266,6 +269,103 @@ class EventRecurrenceService
                 $this->createOccurrence($event, $occStart->copy(), $duration, $positionIds);
             }
         });
+    }
+
+    /**
+     * Cria ocorrências em falta até recurrence_until, sem apagar as que já existem.
+     */
+    public function ensureOccurrences(Event $event): int
+    {
+        if ($event->is_occurrence || $event->parent_event_id) {
+            return 0;
+        }
+
+        $starts = $this->plannedChildStarts($event);
+        if ($starts === []) {
+            return 0;
+        }
+
+        $existing = Event::query()
+            ->where('parent_event_id', $event->id)
+            ->where('is_occurrence', true)
+            ->pluck('starts_at')
+            ->map(fn ($at): string => Carbon::parse($at)->format('Y-m-d H:i'))
+            ->flip();
+
+        $event->loadMissing('publicPositions');
+        $positionIds = $event->publicPositions->pluck('id')->all();
+        $duration = Carbon::parse($event->starts_at)->diffInSeconds(Carbon::parse($event->ends_at));
+        $created = 0;
+
+        foreach ($starts as $occStart) {
+            $key = $occStart->format('Y-m-d H:i');
+            if ($existing->has($key)) {
+                continue;
+            }
+
+            $this->createOccurrence($event, $occStart->copy(), $duration, $positionIds);
+            $created++;
+        }
+
+        return $created;
+    }
+
+    /**
+     * @return list<Carbon>
+     */
+    protected function plannedChildStarts(Event $event): array
+    {
+        if ($event->recurrence_frequency === 'weekly' && $event->recurrence_until) {
+            $start = Carbon::parse($event->starts_at);
+            $until = Carbon::parse($event->recurrence_until)->endOfDay();
+            $intervalWeeks = max(1, min(12, (int) ($event->recurrence_interval_weeks ?? 1)));
+            $cursor = $start->copy()->addWeeks($intervalWeeks);
+            $max = $this->weeklyLimit($start, $until, $intervalWeeks);
+            $starts = [];
+            $n = 0;
+
+            while ($cursor->lte($until) && $n < $max) {
+                $starts[] = $cursor->copy();
+                $cursor->addWeeks($intervalWeeks);
+                $n++;
+            }
+
+            return $starts;
+        }
+
+        if ($event->recurrence_frequency === 'yearly'
+            && $event->recurrence_until
+            && is_array($event->recurrence_config)
+            && $this->yearlyConfigIsComplete($event->recurrence_config)) {
+            return $this->yearly->occurrenceStarts(
+                $event->starts_at,
+                $event->recurrence_until,
+                $event->recurrence_config,
+                self::MAX_YEARLY_CHILD_OCCURRENCES,
+            );
+        }
+
+        if ($event->recurrence_frequency === 'monthly_nth'
+            && $event->recurrence_until
+            && is_array($event->recurrence_config)
+            && $this->monthlyNthConfigIsComplete($event->recurrence_config)) {
+            return $this->monthlyNth->occurrenceStarts(
+                $event->starts_at,
+                $event->recurrence_until,
+                $event->recurrence_config,
+                52,
+            );
+        }
+
+        return [];
+    }
+
+    protected function weeklyLimit(Carbon $start, Carbon $until, int $intervalWeeks): int
+    {
+        $intervalWeeks = max(1, $intervalWeeks);
+        $span = (int) ceil($start->floatDiffInWeeks($until) / $intervalWeeks);
+
+        return min(self::MAX_WEEKLY_CHILD_OCCURRENCES, max(1, $span));
     }
 
     /**

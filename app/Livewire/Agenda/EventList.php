@@ -15,6 +15,7 @@ use App\Services\Agenda\AgendaReadQuery;
 use App\Services\Agenda\AgendaReadResult;
 use App\Services\Agenda\AgendaWeekLayout;
 use App\Services\Agenda\CalendarSync;
+use App\Services\Agenda\RecurrenceHorizon;
 use App\Services\Agenda\RegionalHolidayPlace;
 use App\Services\OrganizationalContextService;
 use Carbon\Carbon;
@@ -135,6 +136,7 @@ class EventList extends Component
 
     public function importHolidays(
         CalendarSync $sync,
+        RecurrenceHorizon $horizon,
         RegionalHolidayPlace $place,
         OrganizationalContextService $context,
     ): void {
@@ -150,17 +152,34 @@ class EventList extends Component
         }
 
         $where = $place->resolve($regional);
-        $year = $this->resolvedCursor()->year;
-        $log = $sync->syncIfDue([$year]);
+        $log = $sync->syncIfDue([(int) now()->year]);
+        $roll = $horizon->extendOpenSeries($regional->id);
         $this->holidayNoticeIsWarning = $where['state'] === null;
-        if (! $log->wasRecentlyCreated) {
+
+        $years = is_array($log->years) && $log->years !== []
+            ? array_values($log->years)
+            : [(int) now()->year, (int) now()->year + 1];
+        $yearLabel = count($years) > 1
+            ? $years[0].' e '.$years[array_key_last($years)]
+            : (string) $years[0];
+
+        if (! $log->wasRecentlyCreated && $roll['series'] === 0) {
             $when = $log->ran_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '';
-            $this->holidayNotice = 'Sincronização deste mês já feita em '.$when.'. O ano inteiro foi carregado e não será duplicado.';
+            $this->holidayNotice = 'Sincronização deste mês já feita em '.$when.'. O ano atual e o seguinte já estavam carregados e não serão duplicados.';
 
             return;
         }
 
-        $this->holidayNotice = $this->holidayNotice($log->inserted + $log->updated, $year, $where, $place);
+        $notice = $log->wasRecentlyCreated
+            ? $this->holidayNotice($log->inserted + $log->updated, $yearLabel, $where, $place)
+            : 'Feriados de '.$yearLabel.' já estavam sincronizados neste mês.';
+
+        if ($roll['series'] > 0) {
+            $through = Carbon::parse($roll['through'])->format('d/m/Y');
+            $notice .= ' Recorrências atualizadas até '.$through.': '.$roll['series'].' séries, '.$roll['dates'].' datas novas.';
+        }
+
+        $this->holidayNotice = $notice;
     }
 
     public function render(
@@ -326,18 +345,18 @@ class EventList extends Component
     /**
      * @param  array{city: ?string, state: ?string}  $where
      */
-    protected function holidayNotice(int $count, int $year, array $where, RegionalHolidayPlace $place): string
+    protected function holidayNotice(int $count, string $yearLabel, array $where, RegionalHolidayPlace $place): string
     {
         $tail = ' Eles aparecem no calendário e ficam fora da lista.';
         if ($where['state'] === null) {
-            return 'Feriados nacionais de '.$year.' cadastrados ('.$count.'). O local da regional não tem UF, então o feriado estadual não aparece.';
+            return 'Feriados nacionais de '.$yearLabel.' cadastrados ('.$count.'). O local da regional não tem UF, então o feriado estadual não aparece.';
         }
 
         $placeLabel = $where['city']
             ? $where['city'].' ('.$place->stateLabel($where['state']).')'
             : $place->stateLabel($where['state']);
 
-        return $count.' feriados de '.$year.' cadastrados para '.$placeLabel.': nacionais e o estadual.'.$tail;
+        return $count.' feriados de '.$yearLabel.' cadastrados para '.$placeLabel.': nacionais e o estadual.'.$tail;
     }
 
     protected function sanitize(): void

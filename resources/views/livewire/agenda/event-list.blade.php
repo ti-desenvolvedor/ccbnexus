@@ -47,12 +47,12 @@
             @endif
             @if ($canCreate)
                 @if ($activeRegional)
-                    <button type="button" wire:click="importHolidays" wire:loading.attr="disabled" wire:target="importHolidays" title="Uma vez por mês, carrega o ano inteiro: nacionais, estadual da cidade, Enem e eleições. Não duplica e não entra na lista." class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:w-auto dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900">Sincronizar calendário</button>
+                    <button type="button" wire:click="importHolidays" wire:loading.attr="disabled" wire:target="importHolidays" title="Atualiza o ano atual e o seguinte: feriados e recorrências que fecham em 31 de dezembro. Não duplica e os feriados não entram na lista." class="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:w-auto dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900">Sincronizar calendário</button>
                 @else
                     <button type="button" disabled aria-disabled="true" title="Selecione uma regional no topo para sincronizar o calendário da cidade." class="inline-flex min-h-11 w-full cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-500 sm:w-auto dark:border-slate-800">Sincronizar calendário</button>
                 @endif
                 @if ($holidaySync)
-                    <p class="w-full text-xs text-slate-600 sm:text-right dark:text-slate-300">Última sincronização: {{ $holidaySync->ran_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') }}. Ano inteiro, uma vez por mês.</p>
+                    <p class="w-full text-xs text-slate-600 sm:text-right dark:text-slate-300">Última sincronização: {{ $holidaySync->ran_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') }}. Ano atual e o seguinte, uma vez por mês.</p>
                 @endif
             @endif
         </div>

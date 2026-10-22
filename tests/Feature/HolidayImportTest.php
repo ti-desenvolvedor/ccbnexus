@@ -215,6 +215,86 @@ class HolidayImportTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_calendar_sync_extends_year_end_recurrence_into_the_next_year(): void
+    {
+        $this->travelTo('2026-10-21 10:00:00');
+        $user = User::factory()->create(['is_super_admin' => true]);
+        $regional = $this->regional('Regional Embu', 'embu-recorrencia', 'Embu das Artes', 'SP');
+        $other = $this->regional('Outra', 'outra-recorrencia', 'Rio de Janeiro', 'RJ');
+
+        $open = Event::query()->create([
+            'regional_id' => $regional->id,
+            'title' => 'Ensaio mensal',
+            'starts_at' => '2026-01-03 18:30:00',
+            'ends_at' => '2026-01-03 20:30:00',
+            'status' => 'published',
+            'created_by' => $user->id,
+            'is_occurrence' => false,
+            'recurrence_frequency' => 'monthly_nth',
+            'recurrence_until' => '2026-12-31',
+            'recurrence_config' => [
+                'nth' => 1,
+                'weekday' => 6,
+                'months' => ['type' => 'all', 'list' => []],
+            ],
+        ]);
+        $closed = Event::query()->create([
+            'regional_id' => $regional->id,
+            'title' => 'Série que termina no meio do ano',
+            'starts_at' => '2026-01-05 19:00:00',
+            'ends_at' => '2026-01-05 21:00:00',
+            'status' => 'published',
+            'created_by' => $user->id,
+            'is_occurrence' => false,
+            'recurrence_frequency' => 'weekly',
+            'recurrence_interval_weeks' => 1,
+            'recurrence_until' => '2026-06-30',
+        ]);
+        $foreign = Event::query()->create([
+            'regional_id' => $other->id,
+            'title' => 'Série de outra regional',
+            'starts_at' => '2026-01-03 18:30:00',
+            'ends_at' => '2026-01-03 20:30:00',
+            'status' => 'published',
+            'created_by' => $user->id,
+            'is_occurrence' => false,
+            'recurrence_frequency' => 'monthly_nth',
+            'recurrence_until' => '2026-12-31',
+            'recurrence_config' => [
+                'nth' => 1,
+                'weekday' => 6,
+                'months' => ['type' => 'all', 'list' => []],
+            ],
+        ]);
+
+        session(['nexus.active_regional_id' => $regional->id]);
+
+        Livewire::actingAs($user)
+            ->test(EventList::class)
+            ->set('cursor', '2026-10-21')
+            ->call('importHolidays')
+            ->assertSee('Recorrências atualizadas até 31/12/2027');
+
+        $this->assertSame('2027-12-31', $open->fresh()->recurrence_until->toDateString());
+        $this->assertSame('2026-06-30', $closed->fresh()->recurrence_until->toDateString());
+        $this->assertSame('2026-12-31', $foreign->fresh()->recurrence_until->toDateString());
+        $this->assertTrue(
+            Event::query()
+                ->where('parent_event_id', $open->id)
+                ->where('is_occurrence', true)
+                ->where('starts_at', '>=', '2027-01-01')
+                ->exists()
+        );
+        $this->assertFalse(
+            Event::query()
+                ->where('parent_event_id', $closed->id)
+                ->where('starts_at', '>=', '2026-07-01')
+                ->exists()
+        );
+
+        $this->travelBack();
+    }
+
     private function regional(string $name, string $slug, string $city, string $state): Regional
     {
         $location = Location::query()->create([

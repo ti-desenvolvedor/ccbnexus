@@ -16,17 +16,18 @@
     $narrowRegularUrl = str_replace('\\', '/', $narrowRegular);
     $narrowBoldUrl = str_replace('\\', '/', $narrowBold);
 
-    // Fonte de leitura do boletim. A estimativa de quebra usa estas mesmas medidas.
-    $bodyPt = 9.5;
-    $headingPt = 10.0;
-    $titlePt = 14.0;
-    $subPt = 11.0;
-    $metaPt = 8.0;
-    $lineHeight = 1.15;
-    $marginTopMm = 10.0;
-    $marginSideMm = 14.0;
-    $marginBottomMm = 16.0;
-    $columnGapMm = 8.0;
+    // Mesmas medidas do Word (BaptismListDocumentLayout).
+    $layout = \App\Services\BaptismListDocumentLayout::class;
+    $bodyPt = $layout::BODY_PT;
+    $headingPt = $layout::HEADING_PT;
+    $titlePt = $layout::TITLE_PT;
+    $subPt = $layout::SUB_PT;
+    $metaPt = $layout::META_PT;
+    $lineHeight = $layout::LINE_HEIGHT;
+    $marginTopMm = $layout::MARGIN_TOP_CM * 10;
+    $marginSideMm = $layout::MARGIN_SIDE_CM * 10;
+    $marginBottomMm = $layout::MARGIN_BOTTOM_CM * 10;
+    $columnGapMm = $layout::COLUMN_GAP_CM * 10;
     $colDate = 16;
     $colDay = 13;
     $colTime = 17;
@@ -67,7 +68,7 @@
         @endif
 
         @page {
-            margin: {{ $marginTopMm }}mm {{ $marginSideMm }}mm {{ $marginBottomMm }}mm {{ $marginSideMm }}mm;
+            {{ $layout::marginCss() }}
         }
 
         body {
@@ -119,8 +120,8 @@
             vertical-align: top;
             word-wrap: break-word;
         }
-        table.sheet td.col-left { padding-right: {{ $columnGapMm / 2 }}mm; }
-        table.sheet td.col-right { padding-left: {{ $columnGapMm / 2 }}mm; }
+        table.sheet td.col-left { padding-right: {{ $layout::columnPaddingMm() }}mm; }
+        table.sheet td.col-right { padding-left: {{ $layout::columnPaddingMm() }}mm; }
 
         h2.section {
             font-size: {{ $headingPt }}pt;
@@ -128,8 +129,8 @@
             text-align: center;
             background: #B3DDF2;
             border: 0.5pt solid #000;
-            margin: 4px 0 2px;
-            padding: 1.5pt 3px;
+            margin: 2px 0 1px;
+            padding: 0.8pt 2px;
             page-break-after: avoid;
             page-break-inside: avoid;
         }
@@ -140,8 +141,8 @@
             text-align: center;
             background: #B3DDF2;
             border: 0.5pt solid #000;
-            margin: 5px 0 2px;
-            padding: 1.5pt 3px;
+            margin: 3px 0 1px;
+            padding: 0.8pt 2px;
             page-break-after: avoid;
             page-break-inside: avoid;
         }
@@ -157,7 +158,7 @@
         table.list td {
             border: 0.4pt solid #000;
             vertical-align: middle;
-            padding: 1.4pt 2px;
+            padding: 0.6pt 1.5pt;
             word-wrap: break-word;
         }
         table.list .date { width: {{ $colDate }}%; text-align: center; white-space: nowrap; }
@@ -200,10 +201,10 @@
         }
         .verso {
             position: fixed;
-            bottom: -10mm;
+            bottom: -{{ max(6, $marginBottomMm - 6) }}mm;
             left: 0;
             width: 100%;
-            height: 8mm;
+            height: 7mm;
             overflow: hidden;
             font-size: {{ $metaPt }}pt;
             line-height: 1.1;
@@ -223,11 +224,10 @@
     $sectionMap = $sections instanceof \Illuminate\Support\Collection ? $sections->all() : $sections;
     $blocks = \App\Services\BaptismListDocumentBlocks::build($report, $sectionMap);
 
-    // Passo medido no DomPDF com Arial Narrow 9.5pt: 13.9pt por linha e 3.4pt de borda.
-    // A coluna para quando a fileira seguinte não cabe. Uma percentagem da página
-    // deixava uma faixa em branco mesmo quando ainda cabia uma fileira.
-    $linePt = $useNarrow ? 13.9 : ($bodyPt * 1.35);
-    $rowChrome = 3.4;
+    // Passo medido no DomPDF com Arial Narrow no corpo atual.
+    // A coluna para quando a fileira seguinte não cabe.
+    $linePt = $useNarrow ? $layout::NARROW_LINE_PT : ($bodyPt * 1.35);
+    $rowChrome = 2.8;
     $charPt = $bodyPt * ($useNarrow ? 0.46 : 0.56);
     $charsPerLine = max(22, (int) floor($columnInnerPt / $charPt));
     $firstCap = $columnHeightFirst - 6;
