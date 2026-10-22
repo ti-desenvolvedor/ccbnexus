@@ -12,6 +12,9 @@ use App\Models\Regional;
 use App\Models\RegionalNotice;
 use App\Models\User;
 use App\Services\BaptismListReportBuilder;
+use App\Services\BaptismListReportConfirmation;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Validation\ValidationException;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Database\Seeders\CcbReferenceDataSeeder;
@@ -367,6 +370,8 @@ class BaptismListReportTest extends TestCase
 
     public function test_baptism_list_follows_the_active_regional(): void
     {
+        Carbon::setTestNow(Carbon::parse('2026-10-15 12:00:00'));
+
         $this->seed(RolesAndPermissionsSeeder::class);
         $this->seed(CcbReferenceDataSeeder::class);
 
@@ -416,6 +421,8 @@ class BaptismListReportTest extends TestCase
             ->assertDispatched('nexus-context-updated');
 
         $this->assertSame($demo->id, session('nexus.active_regional_id'));
+
+        Carbon::setTestNow();
     }
 
     public function test_pending_event_appears_in_listing_preview_and_revisions(): void
@@ -709,5 +716,207 @@ class BaptismListReportTest extends TestCase
         $this->actingAs($outsider)
             ->get(route('secretaria.baptism-list.docx', $report))
             ->assertForbidden();
+    }
+
+    public function test_confirming_a_draft_list_marks_it_validated_and_audits(): void
+    {
+        [$regional, $user, $report] = $this->draftBulletin();
+
+        $confirmed = app(BaptismListReportConfirmation::class)->confirm(
+            $report,
+            $user,
+            'Lista conferida com a secretaria.',
+            $regional->id,
+        );
+
+        $this->assertSame(BaptismListReport::STATUS_READY, $confirmed->status);
+        $this->assertSame('Lista conferida com a secretaria.', $confirmed->meta['confirmation']['justification'] ?? null);
+        $this->assertDatabaseHas('activity_log', [
+            'subject_type' => BaptismListReport::class,
+            'subject_id' => $report->id,
+            'description' => 'Lista de batismos confirmada',
+            'event' => 'confirmed',
+        ]);
+
+        $sections = $confirmed->items->where('is_visible', true)->groupBy('section_key');
+        $html = view('reports.baptism-list.pdf', [
+            'report' => $confirmed->load(['items', 'regional']),
+            'sections' => $sections,
+        ])->render();
+        $this->assertStringContainsString('Versão validada R00', $html);
+    }
+
+    public function test_confirm_refuses_another_regional_and_a_list_already_validated(): void
+    {
+        [$regional, $user, $report] = $this->draftBulletin();
+        $other = Regional::query()->create([
+            'name' => 'Outra Regional',
+            'slug' => 'outra-regional-apr',
+            'is_active' => true,
+        ]);
+
+        try {
+            app(BaptismListReportConfirmation::class)->confirm(
+                $report,
+                $user,
+                'Lista conferida com a secretaria.',
+                $other->id,
+            );
+            $this->fail('A confirmação cruzou a regional ativa.');
+        } catch (AuthorizationException) {
+            $this->assertSame(BaptismListReport::STATUS_DRAFT, $report->fresh()->status);
+        }
+
+        $report->update(['status' => BaptismListReport::STATUS_READY]);
+
+        try {
+            app(BaptismListReportConfirmation::class)->confirm(
+                $report->fresh(),
+                $user,
+                'Lista conferida com a secretaria.',
+                $regional->id,
+            );
+            $this->fail('Uma lista validada foi confirmada de novo.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('confirmation_justification', $exception->errors());
+        }
+    }
+
+    public function test_confirm_blocks_visible_pending_items_and_allows_hidden_ones(): void
+    {
+        [$regional, $user, $report] = $this->draftBulletin(pending: true);
+        $item = $report->items->first(fn (BaptismListReportItem $row) => ($row->payload['status'] ?? null) === 'pending_approval');
+        $this->assertNotNull($item);
+
+        try {
+            app(BaptismListReportConfirmation::class)->confirm(
+                $report,
+                $user,
+                'Lista conferida com a secretaria.',
+                $regional->id,
+            );
+            $this->fail('A lista foi confirmada com item pendente visível.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('confirmation_justification', $exception->errors());
+        }
+
+        $item->update(['is_visible' => false]);
+
+        $confirmed = app(BaptismListReportConfirmation::class)->confirm(
+            $report->fresh(),
+            $user,
+            'Pendente oculto; o restante está conferido.',
+            $regional->id,
+        );
+
+        $this->assertSame(BaptismListReport::STATUS_READY, $confirmed->status);
+    }
+
+    public function test_resync_of_a_validated_list_returns_it_to_draft(): void
+    {
+        [$regional, $user, $report] = $this->draftBulletin();
+        app(BaptismListReportConfirmation::class)->confirm(
+            $report,
+            $user,
+            'Lista conferida com a secretaria.',
+            $regional->id,
+        );
+
+        $synced = app(BaptismListReportBuilder::class)->generateOrSync(
+            $regional->id,
+            Carbon::parse('2026-10-15'),
+            $user,
+        );
+
+        $this->assertSame($report->id, $synced->id);
+        $this->assertSame(BaptismListReport::STATUS_DRAFT, $synced->status);
+        $this->assertArrayNotHasKey('confirmation', $synced->meta ?? []);
+    }
+
+    public function test_page_confirms_the_open_revision_and_hides_the_action_from_viewers(): void
+    {
+        [$regional, $maintainer, $report] = $this->draftBulletin();
+        $maintainer->givePermissionTo('visualizar_relatorios');
+
+        $viewer = User::factory()->create(['regional_id' => $regional->id]);
+        $viewer->givePermissionTo('visualizar_relatorios');
+        session(['nexus.active_regional_id' => $regional->id]);
+
+        Livewire::actingAs($viewer)
+            ->test(BaptismListReportPage::class)
+            ->assertDontSee('Confirmar lista')
+            ->call('confirmList')
+            ->assertForbidden();
+
+        $other = Regional::query()->create([
+            'name' => 'Regional Vizinha',
+            'slug' => 'regional-vizinha-apr',
+            'is_active' => true,
+        ]);
+        $neighbor = User::factory()->create(['regional_id' => $other->id]);
+        $neighbor->givePermissionTo(['visualizar_relatorios', 'editar_evento']);
+        session(['nexus.active_regional_id' => $other->id]);
+
+        Livewire::actingAs($neighbor)
+            ->test(BaptismListReportPage::class)
+            ->set('reportId', $report->id)
+            ->set('confirmation_justification', 'Tentativa de outra regional.')
+            ->call('confirmList')
+            ->assertForbidden();
+
+        $this->assertSame(BaptismListReport::STATUS_DRAFT, $report->fresh()->status);
+
+        session(['nexus.active_regional_id' => $regional->id]);
+
+        Livewire::actingAs($maintainer)
+            ->test(BaptismListReportPage::class)
+            ->assertSee('Confirmar lista')
+            ->set('confirmation_justification', 'Lista conferida com a secretaria.')
+            ->call('confirmList')
+            ->assertSee('Lista confirmada')
+            ->assertSee('Versão validada R00')
+            ->call('setScreen', 'versoes')
+            ->assertSee('Validada');
+
+        $this->assertSame(BaptismListReport::STATUS_READY, $report->fresh()->status);
+    }
+
+    /**
+     * @return array{0: Regional, 1: User, 2: BaptismListReport}
+     */
+    protected function draftBulletin(bool $pending = false): array
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(CcbReferenceDataSeeder::class);
+
+        $regional = Regional::query()->create([
+            'name' => 'Regional Teste',
+            'slug' => 'regional-teste-apr-'.($pending ? 'p' : 'd').'-'.uniqid(),
+            'is_active' => true,
+        ]);
+        $user = User::factory()->create([
+            'regional_id' => $regional->id,
+        ]);
+        $user->givePermissionTo('editar_evento');
+        $batismo = EventType::query()->where('slug', 'batismo')->firstOrFail();
+
+        Event::query()->create([
+            'regional_id' => $regional->id,
+            'title' => $pending ? 'Batismo pendente' : 'Batismo boletim',
+            'event_type_id' => $batismo->id,
+            'starts_at' => Carbon::parse('2026-10-20 18:30:00'),
+            'ends_at' => Carbon::parse('2026-10-20 20:30:00'),
+            'status' => $pending ? 'pending_approval' : 'published',
+            'include_on_baptism_list' => true,
+            'created_by' => $user->id,
+        ]);
+
+        $report = app(BaptismListReportBuilder::class)->generateOrSync(
+            $regional->id,
+            Carbon::parse('2026-10-15'),
+            $user,
+        );
+
+        return [$regional, $user, $report];
     }
 }
