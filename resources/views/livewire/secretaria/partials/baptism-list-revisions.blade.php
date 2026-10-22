@@ -12,7 +12,7 @@
             @foreach ($revisions as $revision)
                 @php
                     $statusLabel = match ($revision->status) {
-                        'ready' => 'Pronta',
+                        'ready' => 'Validada',
                         'archived' => 'Arquivada',
                         default => 'Rascunho',
                     };

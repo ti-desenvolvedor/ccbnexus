@@ -46,6 +46,7 @@ Todo campo de escolha usa este componente (listas curtas e longas).
 ## Moderação
 
 - Aprovar/rejeitar: justificativa **obrigatória** + confirmação
+- Confirmar a lista de batismos: justificativa obrigatória; o botão fica bloqueado enquanto houver item visível ainda não publicado
 - Feedback toast/alert imediato
 
 ## Referências

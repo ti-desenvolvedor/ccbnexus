@@ -65,7 +65,7 @@ Ordem fixa em cada entrega:
 | Salas                       | `meeting_rooms` (owner morph) + `room_assignments` | Visibilidade por escopo via assignments |
 | Reservas                    | `room_reservations` (status, aprovação, notas) | Conflitos em Service; endurecer race/lock |
 | Eventos / agenda            | `events`, RSVP, papéis, aprovações morph, WhatsApp | Livewire EventForm/List + ApprovalsQueue; canais `include_on_baptism_list` / WA |
-| Secretaria / boletim        | `baptism_list_reports`, notices/changes/collections, `whatsapp_groups` | Lista PDF + Marcações; seed Agenda Excel 2026 Embu |
+| Secretaria / boletim        | `baptism_list_reports`, notices/changes/collections, `whatsapp_groups` | Lista PDF + Marcações; confirmação da revisão (rascunho → validada); seed Agenda Excel 2026 Embu |
 | Públicos                    | Taxonomia `public_groups/subgroups/departments/positions` + pivot evento | `audiences` plano ainda coexiste (deprecar); presets por tipo |
 | Contexto ativo              | `OrganizationalContextService` + middleware `nexus.context` | Promover seletor ao chrome global (topbar) |
 | Auditoria                   | Spatie Activity Log em vários models | Inclui User/AccessRequest/Approval + catálogo público |

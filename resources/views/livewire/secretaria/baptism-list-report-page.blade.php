@@ -54,6 +54,8 @@
         </section>
     @endif
 
+    @include('livewire.secretaria.partials.baptism-list-confirm')
+
     @if ($screen === 'versoes')
         @include('livewire.secretaria.partials.baptism-list-revisions')
     @elseif ($report && $screen === 'visualizacao')

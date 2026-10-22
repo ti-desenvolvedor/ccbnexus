@@ -326,13 +326,21 @@ class BaptismListReportBuilder
                     $defaults
                 );
                 $report->items()->delete();
+                $meta = array_merge($report->meta ?? [], ['section_periods' => $resolvedPeriods]);
+                $nextStatus = $report->status === BaptismListReport::STATUS_READY
+                    ? BaptismListReport::STATUS_DRAFT
+                    : $report->status;
+                if ($nextStatus === BaptismListReport::STATUS_DRAFT) {
+                    unset($meta['confirmation']);
+                }
                 $report->update([
                     'period_start' => $periodStart,
                     'period_end' => $periodEnd,
                     'edition_at' => now(),
+                    'status' => $nextStatus,
                     'generated_by' => $user->id,
                     'generated_at' => now(),
-                    'meta' => array_merge($report->meta ?? [], ['section_periods' => $resolvedPeriods]),
+                    'meta' => $meta,
                 ]);
             } else {
                 $resolvedPeriods = $this->normalizeSectionPeriods($sectionPeriods ?? $defaults, $defaults);

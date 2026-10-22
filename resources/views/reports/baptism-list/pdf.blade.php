@@ -39,12 +39,9 @@
     $pageHeightPt = 841.89 - (($marginTopMm + $marginBottomMm) * $mmToPt);
     $contentWidthPt = $pageWidthPt - (2 * $marginSideMm * $mmToPt);
     $columnInnerPt = ($contentWidthPt / 2) - (($columnGapMm * $mmToPt) / 2);
-    $draftPt = (($report->status ?? null) === \App\Models\BaptismListReport::STATUS_DRAFT)
-        ? (($bodyPt * $lineHeight) + 4)
-        : 0;
-    $mastheadPt = $draftPt + ($titlePt * $lineHeight) + (2 * $subPt * $lineHeight) + 4;
     $runningPt = ($metaPt * $lineHeight) + 4;
-    $columnHeightFirst = max(160, $pageHeightPt - $mastheadPt);
+    // Igual ao Word: o cabeçalho entra na coluna da esquerda, as duas colunas começam no topo.
+    $columnHeightFirst = max(160, $pageHeightPt - 4);
     $columnHeightNext = max(160, $pageHeightPt - $runningPt);
 @endphp
 <!DOCTYPE html>
@@ -78,19 +75,18 @@
             line-height: {{ $lineHeight }};
         }
 
-        .masthead {
+        .doc-title, .doc-sub, .provisional {
             text-align: center;
-            margin: 0 0 2px;
+            margin: 0;
+            padding: 0;
         }
-        .masthead h1 {
+        .doc-title {
             font-size: {{ $titlePt }}pt;
             font-weight: bold;
-            margin: 0;
         }
-        .masthead .sub {
+        .doc-sub {
             font-size: {{ $subPt }}pt;
             font-weight: bold;
-            margin: 0;
         }
 
         .provisional {
@@ -129,8 +125,9 @@
             text-align: center;
             background: #B3DDF2;
             border: 0.5pt solid #000;
-            margin: 2px 0 1px;
-            padding: 0.8pt 2px;
+            margin: 0;
+            padding: 0.2pt 2px;
+            line-height: 1;
             page-break-after: avoid;
             page-break-inside: avoid;
         }
@@ -141,8 +138,9 @@
             text-align: center;
             background: #B3DDF2;
             border: 0.5pt solid #000;
-            margin: 3px 0 1px;
-            padding: 0.8pt 2px;
+            margin: 0;
+            padding: 0.2pt 2px;
+            line-height: 1;
             page-break-after: avoid;
             page-break-inside: avoid;
         }
@@ -150,7 +148,7 @@
         table.list {
             width: 100%;
             border-collapse: collapse;
-            margin: 0 0 2px;
+            margin: 0;
             font-size: {{ $bodyPt }}pt;
             table-layout: fixed;
         }
@@ -158,7 +156,8 @@
         table.list td {
             border: 0.4pt solid #000;
             vertical-align: middle;
-            padding: 0.6pt 1.5pt;
+            padding: 0 0.6pt;
+            line-height: 1;
             word-wrap: break-word;
         }
         table.list .date { width: {{ $colDate }}%; text-align: center; white-space: nowrap; }
@@ -170,8 +169,9 @@
         table.list tr.alt td { background: #D9D9D9; }
 
         .note, .intro {
-            margin: 1px 0 3px;
+            margin: 0 0 1px;
             font-size: {{ $bodyPt }}pt;
+            line-height: 1;
             text-align: justify;
             background: transparent;
         }
@@ -190,10 +190,10 @@
         .note b, .note strong { font-weight: bold; }
         .note i, .note em { font-style: italic; }
         .note u { text-decoration: underline; }
-        .note ul { margin: 2px 0 4px 14px; padding: 0; }
-        .note li { margin-bottom: 1px; }
+        .note ul { margin: 0 0 0 12px; padding: 0; }
+        .note li { margin: 0; }
 
-        p { margin: 0; }
+        p, ul, ol, li { margin: 0; padding: 0; line-height: 1; }
         .footer {
             margin: 4px 0 0;
             font-size: {{ $bodyPt }}pt;
@@ -201,10 +201,10 @@
         }
         .verso {
             position: fixed;
-            bottom: -{{ max(6, $marginBottomMm - 6) }}mm;
+            bottom: -{{ number_format(max(4, $marginBottomMm - 2), 1, '.', '') }}mm;
             left: 0;
             width: 100%;
-            height: 7mm;
+            height: {{ number_format(max(4, $marginBottomMm - 3), 1, '.', '') }}mm;
             overflow: hidden;
             font-size: {{ $metaPt }}pt;
             line-height: 1.1;
@@ -224,13 +224,12 @@
     $sectionMap = $sections instanceof \Illuminate\Support\Collection ? $sections->all() : $sections;
     $blocks = \App\Services\BaptismListDocumentBlocks::build($report, $sectionMap);
 
-    // Passo medido no DomPDF com Arial Narrow no corpo atual.
-    // A coluna para quando a fileira seguinte não cabe.
-    $linePt = $useNarrow ? $layout::NARROW_LINE_PT : ($bodyPt * 1.35);
-    $rowChrome = 2.8;
-    $charPt = $bodyPt * ($useNarrow ? 0.46 : 0.56);
+    // Entrelinha simples do Word (fonte estreita + margem da célula).
+    $linePt = $useNarrow ? $layout::NARROW_LINE_PT : ($bodyPt * 1.2);
+    $rowChrome = 1.15;
+    $charPt = $bodyPt * ($useNarrow ? 0.40 : 0.52);
     $charsPerLine = max(22, (int) floor($columnInnerPt / $charPt));
-    $firstCap = $columnHeightFirst - 6;
+    $firstCap = $columnHeightFirst - 10;
     $nextCap = $columnHeightNext - 6;
     $atomCap = min($firstCap, $nextCap);
 
@@ -301,10 +300,25 @@
         $heads = preg_match_all('/<h[23]\b/i', $html) ?: 0;
         $blocks = preg_match_all('/<(?:p|div|li)\b/i', $html) ?: 0;
 
-        return ($textLines($html) * $linePt) + ($heads * 12) + ($blocks * 2.5) + 2;
+        return ($textLines($html) * $linePt) + ($heads * 3) + ($blocks * 0.6);
     };
 
     $atoms = [];
+    $pushMasthead = static function (string $html, float $height) use (&$atoms): void {
+        $atoms[] = ['kind' => 'html', 'html' => $html, 'h' => $height, 'keep' => false];
+    };
+    if ($isDraft) {
+        $pushMasthead('<p class="provisional">PROVISÓRIA - EM CONFIRMAÇÃO</p>', $bodyPt + 2);
+    }
+    $pushMasthead('<p class="doc-title">Congregação Cristã no Brasil</p>', $titlePt + 1);
+    $regionalHeading = trim((string) ($report->regional?->name ?? ''));
+    if ($regionalHeading !== '') {
+        $pushMasthead('<p class="doc-sub">'.e($regionalHeading).'</p>', $subPt + 0.5);
+    }
+    $pushMasthead(
+        '<p class="doc-sub">Lista de Batismos e Diversos – '.e(\App\Services\BaptismListDocumentBlocks::issueDateLabel($report)).'</p>',
+        $subPt + 3
+    );
     $pushHtml = static function (string $html) use (&$atoms, $htmlHeight, $atomCap, $linePt): void {
         $html = trim($html);
         if ($html === '') {
@@ -383,7 +397,7 @@
                     'kind' => 'row',
                     'html' => $row,
                     // 0,88 aproxima a estimativa da altura real desenhada pelo DomPDF.
-                    'h' => ((max(1, $rowLines($row)) * $linePt) + $rowChrome) * 0.88,
+                    'h' => (max(1, $rowLines($row)) * $linePt) + $rowChrome,
                     'keep' => false,
                     'section' => $sectionSerial,
                     'resume' => $heading,
@@ -466,27 +480,9 @@
         }
     };
 
+    // O Word não repete a faixa azul quando a tabela continua na outra coluna.
     $resumePrefix = static function (array $atom) use (&$page, &$side): ?array {
-        $resume = (string) ($atom['resume'] ?? '');
-        $section = $atom['section'] ?? null;
-        if ($resume === '' || $section === null) {
-            return null;
-        }
-        $bucket = $page[$side];
-        if ($bucket !== []) {
-            $last = $bucket[array_key_last($bucket)];
-            if (($last['section'] ?? null) === $section) {
-                return null;
-            }
-        }
-
-        return [
-            'kind' => 'html',
-            'html' => $resume,
-            'h' => (float) ($atom['resume_h'] ?? 0),
-            'keep' => true,
-            'section' => $section,
-        ];
+        return null;
     };
 
     foreach ($atoms as $atom) {
@@ -526,90 +522,12 @@
         $pages[] = $blankPage();
     }
 
-    // Na última página o Word equilibra as duas colunas.
-    $lastIndex = count($pages) - 1;
-    $last = $pages[$lastIndex];
-    $all = array_merge($last['left'], $last['right']);
-    $totalHeight = array_sum(array_column($all, 'h'));
-    $pageCap = $lastIndex === 0 ? $firstCap : $nextCap;
-    if (count($all) > 1 && $totalHeight > 0 && $totalHeight <= ($pageCap * 2)) {
-        $target = $totalHeight / 2;
-        $left = [];
-        $leftHeight = 0.0;
-        $cut = 0;
-        foreach ($all as $index => $atom) {
-            $nextHeight = $leftHeight + $atom['h'];
-            $pastTarget = $left !== [] && $nextHeight > $target && $leftHeight >= ($target * 0.72);
-            $pastCap = $left !== [] && $nextHeight > $pageCap;
-            if ($pastTarget || $pastCap) {
-                $cut = $index;
-                break;
-            }
-            $left[] = $atom;
-            $leftHeight = $nextHeight;
-            $cut = $index + 1;
-        }
-        while ($cut > 0 && $cut < count($all) && ! empty($all[$cut - 1]['keep'])) {
-            array_pop($left);
-            $leftHeight -= $all[$cut - 1]['h'];
-            $cut--;
-        }
-        $right = array_slice($all, $cut);
-        $withResume = static function (array $columnAtoms): array {
-            $out = [];
-            $current = null;
-            foreach ($columnAtoms as $atom) {
-                $section = $atom['section'] ?? null;
-                $resume = (string) ($atom['resume'] ?? '');
-                if ($section !== null && $section !== $current && $resume !== '') {
-                    $last = $out === [] ? null : $out[array_key_last($out)];
-                    if (! $last || ($last['html'] ?? '') !== $resume) {
-                        $out[] = [
-                            'kind' => 'html',
-                            'html' => $resume,
-                            'h' => (float) ($atom['resume_h'] ?? 0),
-                            'keep' => true,
-                            'section' => $section,
-                        ];
-                    }
-                }
-                $out[] = $atom;
-                if ($section !== null) {
-                    $current = $section;
-                }
-            }
-
-            return $out;
-        };
-        $left = $withResume($left);
-        $right = $withResume($right);
-        $leftHeight = array_sum(array_column($left, 'h'));
-        $rightHeight = array_sum(array_column($right, 'h'));
-        if ($left !== [] && $right !== [] && $leftHeight <= ($pageCap + 0.5) && $rightHeight <= ($pageCap + 0.5)) {
-            $pages[$lastIndex] = [
-                'left' => $left,
-                'right' => $right,
-                'lh' => $leftHeight,
-                'rh' => $rightHeight,
-            ];
-        }
-    }
-
+    // O Word enche a coluna esquerda e depois a direita. A última página não redistribui.
     $pageCount = count($pages);
 
     $versionLabel = \App\Services\BaptismListDocumentBlocks::versionLabel($report);
     $generatedLabel = \App\Services\BaptismListDocumentBlocks::generatedLabel($report);
 @endphp
-
-    @if ($isDraft)
-        <p class="provisional">PROVISÓRIA - EM CONFIRMAÇÃO</p>
-    @endif
-
-    <div class="masthead">
-        <h1>Congregação Cristã no Brasil</h1>
-        <p class="sub">{{ $report->regional?->name }}</p>
-        <p class="sub">Lista de Batismos e Diversos – {{ $report->issue_date->locale('pt_BR')->translatedFormat('d \\d\\e F \\d\\e Y') }}</p>
-    </div>
 
     @for ($page = 0; $page < $pageCount; $page++)
         <div class="sheet-page" @if ($page > 0) style="page-break-before: always;" @endif>

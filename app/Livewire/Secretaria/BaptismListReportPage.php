@@ -6,6 +6,7 @@ use App\Models\BaptismListReport;
 use App\Models\BaptismListReportItem;
 use App\Models\Regional;
 use App\Services\BaptismListReportBuilder;
+use App\Services\BaptismListReportConfirmation;
 use App\Services\OrganizationalContextService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -22,6 +23,8 @@ class BaptismListReportPage extends Component
     public ?int $reportId = null;
 
     public string $screen = 'listagem';
+
+    public string $confirmation_justification = '';
 
     /** @var array<string, array{from: string, to: string}> */
     public array $sectionFilters = [];
@@ -163,6 +166,22 @@ class BaptismListReportPage extends Component
         session()->flash('status', __('Lista gerada (R'.$report->revision.').'));
     }
 
+    public function confirmList(BaptismListReportConfirmation $confirmation, OrganizationalContextService $context): void
+    {
+        $report = $this->currentReport();
+        abort_unless($report, 404);
+        $this->authorize('confirm', $report);
+        $confirmed = $confirmation->confirm(
+            $report,
+            auth()->user(),
+            $this->confirmation_justification,
+            $context->activeRegionalId(),
+        );
+        $this->confirmation_justification = '';
+        $this->reportId = $confirmed->id;
+        session()->flash('status', __('Lista confirmada (R'.sprintf('%02d', $confirmed->revision).').'));
+    }
+
     public function toggleItem(int $itemId): void
     {
         abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
@@ -236,11 +255,20 @@ class BaptismListReportPage extends Component
         $pendingItems = $report
             ? $report->items->filter(fn (BaptismListReportItem $item) => ($item->payload['status'] ?? null) === 'pending_approval')->values()
             : collect();
+        $visiblePending = $pendingItems->filter(fn (BaptismListReportItem $item) => $item->is_visible)->values();
+        $canMaintainSecretaria = (bool) auth()->user()?->canMaintainSecretaria();
+        $canConfirmList = $report
+            && $canMaintainSecretaria
+            && $report->status === BaptismListReport::STATUS_DRAFT
+            && $regionalId
+            && (int) $report->regional_id === (int) $regionalId;
 
         return view('livewire.secretaria.baptism-list-report-page', [
             'report' => $report,
             'revisions' => $revisions,
             'pendingItems' => $pendingItems,
+            'canConfirmList' => $canConfirmList,
+            'confirmationBlocked' => $visiblePending->isNotEmpty(),
             'displayBlocks' => $report ? $this->buildDisplayBlocks($grouped) : [],
             'periodHint' => $periodHint,
             'regional' => $context->activeRegionalId()

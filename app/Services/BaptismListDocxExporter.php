@@ -273,7 +273,7 @@ class BaptismListDocxExporter
             'layout' => Table::LAYOUT_FIXED,
             'width' => $this->columnWidth,
             'unit' => TblWidth::TWIP,
-            'cellMargin' => 12,
+            'cellMargin' => 6,
         ]);
 
         foreach ($rows as $row) {
@@ -295,7 +295,7 @@ class BaptismListDocxExporter
             'layout' => Table::LAYOUT_FIXED,
             'width' => $this->columnWidth,
             'unit' => TblWidth::TWIP,
-            'cellMargin' => 12,
+            'cellMargin' => 6,
         ]);
         $table->addRow();
         $cell = $table->addCell($this->columnWidth, [

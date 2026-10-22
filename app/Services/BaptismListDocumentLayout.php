@@ -22,24 +22,24 @@ final class BaptismListDocumentLayout
 
     public const LINE_HEIGHT = 1.0;
 
-    /** Altura de linha medida no DomPDF com Arial Narrow no corpo atual. */
-    public const NARROW_LINE_PT = 12.4;
+    /** Altura de uma linha de tabela no DomPDF, alinhada à entrelinha simples do Word. */
+    public const NARROW_LINE_PT = 10.1;
 
     public const PAGE_WIDTH_CM = 21.0;
 
     public const PAGE_HEIGHT_CM = 29.7;
 
-    public const MARGIN_TOP_CM = 0.7;
+    public const MARGIN_TOP_CM = 0.4;
 
-    public const MARGIN_BOTTOM_CM = 1.2;
+    public const MARGIN_BOTTOM_CM = 0.85;
 
-    public const MARGIN_SIDE_CM = 1.0;
+    public const MARGIN_SIDE_CM = 0.55;
 
-    public const MARGIN_HEADER_CM = 0.3;
+    public const MARGIN_HEADER_CM = 0.15;
 
-    public const MARGIN_FOOTER_CM = 0.3;
+    public const MARGIN_FOOTER_CM = 0.15;
 
-    public const COLUMN_GAP_CM = 0.5;
+    public const COLUMN_GAP_CM = 0.35;
 
     public static function marginCss(): string
     {
