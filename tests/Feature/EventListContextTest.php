@@ -158,8 +158,8 @@ class EventListContextTest extends TestCase
         $this->assertSame('div', strtolower($root->nodeName));
 
         $bound = false;
-        foreach ($root->getElementsByTagName('select') as $select) {
-            if ($select->getAttribute('aria-label') === 'Regional') {
+        foreach ($root->getElementsByTagName('button') as $trigger) {
+            if ($trigger->getAttribute('aria-label') === 'Regional' && $trigger->getAttribute('aria-haspopup') === 'listbox') {
                 $bound = true;
             }
         }
