@@ -45,6 +45,15 @@ No topo de cada formulário com **dois ou mais** campos obrigatórios para guard
 
 ## Mobile
 
+- Abaixo de `md` só a barra de ícones (64px) fica fixa no topo. O contexto e o título da página rolam com o conteúdo. A partir de `md` o topo inteiro volta a ser fixo.
+- Contexto no telemóvel: uma linha “Contexto · regional · administração” que abre os três seletores. Abre sozinho quando falta a regional ou há erro.
+- Gaveta do menu: no máximo 85% da largura, botão Fechar no topo, Esc e toque fora fecham, a página por trás não rola. Navegar fecha a gaveta.
+- O botão rápido de tema sai do topo abaixo de `sm`; o tema continua em Aparência.
+- Agenda no telemóvel abre na vista Agenda (dia a dia) quando a URL não fixa outra vista. Mensal continua disponível.
+- Listas com vários filtros: busca sempre visível; os outros filtros ficam atrás de “Filtros (N)” abaixo de `sm`.
+- Abas de formulário longo (evento): grelha de 3 colunas no telemóvel, nunca faixa com scroll lateral.
+- Cabeçalhos fixos dentro do conteúdo usam `max-md:top-16` para não ficarem sob a barra.
+- Em ecrã de toque, links e botões dentro de tabelas têm 44px de altura (`pointer: coarse`).
 - Inputs/botões `min-h-[44px]`
 - Filtros `flex-col` → `lg:flex-row`
 - Filas (acesso, aprovações, reservas): cards abaixo de `md`, não só tabela com scroll
