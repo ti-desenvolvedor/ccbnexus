@@ -394,6 +394,15 @@ html.dark[data-palette='red_dark'] .text-primary-600 {
     color: rgb(var(--color-primary-300) / 1);
 }
 
+@media (pointer: coarse) {
+    main td a,
+    main td button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.75rem;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation: none !important;

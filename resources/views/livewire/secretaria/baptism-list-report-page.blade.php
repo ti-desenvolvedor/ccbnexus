@@ -48,12 +48,15 @@
     </div>
 
     @if (session('status'))
-        <div class="rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{{ session('status') }}</div>
+        <x-nexus.alert tone="success">{{ session('status') }}</x-nexus.alert>
     @endif
 
     @if ($pendingItems->isNotEmpty() && $screen !== 'versoes')
         <section aria-labelledby="pending-baptism-heading" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/40">
-            <h2 id="pending-baptism-heading" class="text-sm font-semibold text-amber-950 dark:text-amber-100">Para aprovar</h2>
+            <h2 id="pending-baptism-heading" class="flex items-center gap-2 text-sm font-semibold text-amber-950 dark:text-amber-100">
+                <x-nexus.glyph name="alert" class="h-4 w-4 shrink-0" />
+                Para aprovar
+            </h2>
             <p class="mt-1 text-sm text-amber-950 dark:text-amber-100">Estes itens entram na lista, mas o evento ainda não foi publicado.</p>
             <ul class="mt-3 space-y-1 text-sm text-amber-950 dark:text-amber-100">
                 @foreach ($pendingItems as $item)
@@ -93,13 +96,28 @@
                 $audienceIntro = $first?->payload['audience_intro']
                     ?? \App\Services\BaptismListReportBuilder::DEFAULT_AUDIENCE_INTROS[$section]
                     ?? null;
+                $sectionHidden = $block['hidden'];
+                $hideAction = $isRegionalMeetings ? 'hideRegionalMeetings' : "hideSection('{$section}')";
+                $showAction = $isRegionalMeetings ? 'showRegionalMeetings' : "showSection('{$section}')";
             @endphp
 
-            <section class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
-                <div class="border-b border-black/10 bg-[#B3DDF2] px-4 py-2 text-center dark:border-slate-700">
-                    <h2 class="text-xs font-bold text-black">{{ $sectionTitle }}</h2>
+            <section wire:key="baptism-section-{{ $section }}" class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                <div class="border-b border-black/10 px-4 py-2 text-center dark:border-slate-700 {{ $sectionHidden ? 'bg-slate-100 dark:bg-slate-900' : 'bg-[#B3DDF2]' }}">
+                    <h2 class="text-xs font-bold {{ $sectionHidden ? 'text-slate-600 dark:text-slate-300' : 'text-black' }}">{{ $sectionTitle }}</h2>
                 </div>
                 <div class="p-4">
+                @if ($sectionHidden)
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-sm text-slate-600 dark:text-slate-300">
+                            Secção oculta: não entra na visualização, no PDF nem no Word.
+                            @if ($items->isNotEmpty())
+                                {{ $items->count() }} {{ $items->count() === 1 ? 'item fica guardado' : 'itens ficam guardados' }}.
+                            @endif
+                            Eventos novos desta secção também entram ocultos ao atualizar a lista.
+                        </p>
+                        <button type="button" wire:click="{{ $showAction }}" class="inline-flex min-h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800 dark:bg-slate-900">Mostrar secção</button>
+                    </div>
+                @else
                 <div class="mb-3 flex flex-col gap-3">
                     @if (in_array($section, $longSections, true))
                         <p class="text-xs leading-relaxed text-slate-500">Janela padrão longa (~2,5 / 3 meses)</p>
@@ -118,12 +136,9 @@
                             </div>
                             <button type="button" x-data x-on:click="$wire.periodSection = @js($section); $dispatch('open-modal', 'baptism-apply-period')" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg bg-slate-900 px-4 py-2 text-center font-semibold leading-snug text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:bg-slate-100 dark:text-slate-900">Aplicar período</button>
                         @endif
-                        @if ($isRegionalMeetings)
-                            <button type="button" wire:click="hideRegionalMeetings" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg px-3 py-2 text-center font-semibold leading-snug underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Ocultar secção</button>
-                            <button type="button" wire:click="showRegionalMeetings" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg px-3 py-2 text-center font-semibold leading-snug underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Mostrar secção</button>
-                        @else
-                            <button type="button" wire:click="hideSection('{{ $section }}')" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg px-3 py-2 text-center font-semibold leading-snug underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Ocultar secção</button>
-                            <button type="button" wire:click="showSection('{{ $section }}')" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg px-3 py-2 text-center font-semibold leading-snug underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Mostrar secção</button>
+                        <button type="button" wire:click="{{ $hideAction }}" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg px-3 py-2 text-center font-semibold leading-snug underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Ocultar secção</button>
+                        @if ($items->contains(fn ($item) => ! $item->is_visible))
+                            <button type="button" wire:click="{{ $showAction }}" class="inline-flex min-h-11 max-w-full items-center justify-center whitespace-normal rounded-lg px-3 py-2 text-center font-semibold leading-snug underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Mostrar todos</button>
                         @endif
                     </div>
                 </div>
@@ -234,6 +249,7 @@
                             </li>
                         @endforeach
                     </ul>
+                @endif
                 @endif
                 </div>
             </section>

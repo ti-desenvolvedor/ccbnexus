@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div class="space-y-4" x-init="if ($wire.view === 'month' && window.matchMedia('(max-width: 639px)').matches && !new URLSearchParams(location.search).has('view')) { $wire.setView('agenda') }">
     <div class="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
         <span>{{ __('Contexto:') }}</span>
         <span class="font-semibold text-slate-900 dark:text-slate-100">{{ $activeRegional?->name ?? __('todas as regionais do seu acesso') }}</span>
@@ -8,21 +8,17 @@
     </div>
 
     @if (! $activeRegional)
-        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+        <x-nexus.alert tone="warning">
             Selecione uma regional no topo para gerar o PDF. Esta tela mostra todas as regionais a que tem acesso.
-        </div>
+        </x-nexus.alert>
     @endif
 
     @if ($periodInvalid)
-        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100">
-            Período inválido.
-        </div>
+        <x-nexus.alert tone="danger">Período inválido.</x-nexus.alert>
     @endif
 
     @if ($holidayNotice !== '')
-        <div class="rounded-xl border px-4 py-3 text-sm {{ $holidayNoticeIsWarning ? 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100' : 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100' }}" role="status">
-            {{ $holidayNotice }}
-        </div>
+        <x-nexus.alert :tone="$holidayNoticeIsWarning ? 'warning' : 'success'">{{ $holidayNotice }}</x-nexus.alert>
     @endif
 
     <div class="flex flex-col gap-3">
@@ -67,7 +63,7 @@
 
     @if ($showPeriod)
         <div class="space-y-2">
-            <p class="text-center text-base font-semibold capitalize text-slate-900 dark:text-slate-100">{{ $periodLabel }}</p>
+            <p class="text-center text-base font-semibold text-slate-900 first-letter:uppercase dark:text-slate-100">{{ $periodLabel }}</p>
             <div class="grid grid-cols-3 gap-2">
                 <button type="button" wire:click="previousPeriod" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-2 text-sm font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">Anterior</button>
                 <button type="button" wire:click="goToday" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-2 text-sm font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">Hoje</button>
@@ -81,6 +77,21 @@
             <label for="event-search" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Buscar eventos</label>
             <input id="event-search" type="search" wire:model.live.debounce.300ms="search" class="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950" />
         </div>
+        @php
+            $activeFilters = collect([$typeFilter !== '' && $typeFilter !== '0', $statusFilter !== '', $channelFilter !== ''])->filter()->count();
+        @endphp
+        <div x-data="{ open: @js($activeFilters > 0) }" class="contents">
+        <button
+            type="button"
+            class="inline-flex min-h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:hidden"
+            @click="open = !open"
+            :aria-expanded="open"
+            aria-controls="event-more-filters"
+        >
+            <span>{{ $activeFilters > 0 ? 'Filtros ('.$activeFilters.')' : 'Filtros' }}</span>
+            <svg class="h-4 w-4 transition" :class="{ 'rotate-180': open }" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="2" stroke-linecap="round" d="M6 9l6 6 6-6" /></svg>
+        </button>
+        <div id="event-more-filters" @class(['flex flex-col gap-3 sm:contents', 'max-sm:hidden' => $activeFilters === 0]) :class="{ 'max-sm:hidden': !open }">
         <div class="w-full sm:w-64">
             <label class="text-xs font-semibold text-slate-700 dark:text-slate-200">Tipo</label>
             <div class="mt-1">
@@ -125,17 +136,20 @@
                 ]"
             />
         </div>
+        </div>
+        </div>
     </div>
 
     @if ($result->truncated)
-        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-            Primeiras 500 ocorrências. O período está incompleto.
-        </div>
+        <x-nexus.alert tone="warning">Primeiras 500 ocorrências. O período está incompleto.</x-nexus.alert>
     @endif
 
     @if ($pendingEvents !== [])
         <section aria-labelledby="pending-events-heading" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/40">
-            <h2 id="pending-events-heading" class="text-sm font-semibold text-amber-950 dark:text-amber-100">Para aprovar</h2>
+            <h2 id="pending-events-heading" class="flex items-center gap-2 text-sm font-semibold text-amber-950 dark:text-amber-100">
+                <x-nexus.glyph name="alert" class="h-4 w-4 shrink-0" />
+                Para aprovar
+            </h2>
             <p class="mt-1 text-sm text-amber-950 dark:text-amber-100">Listagem do que está pendente nesta vista. A aprovação continua na fila.</p>
             <ul class="mt-3 divide-y divide-amber-200 dark:divide-amber-900">
                 @foreach ($pendingEvents as $pending)

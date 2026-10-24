@@ -2,9 +2,15 @@
 
 namespace App\Providers;
 
+use App\Services\Auth\PwnedPasswordService;
+use App\Mail\PasswordResetLinkMail;
+use App\Services\Auth\ImpersonationService;
+use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
+use Illuminate\Contracts\Validation\UncompromisedVerifier;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Activitylog\Models\Activity;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +37,37 @@ class AppServiceProvider extends ServiceProvider
         $this->configurePublicStorageForSharedHosting();
         $this->ensureUploadDirectoriesExist();
         $this->configurePasswordDefaults();
+        $this->app->singleton(UncompromisedVerifier::class, PwnedPasswordService::class);
+        $this->usePlainPasswordResetMail();
+        $this->tagActivityWhileImpersonating();
+    }
+
+    private function tagActivityWhileImpersonating(): void
+    {
+        Activity::creating(function (Activity $activity): void {
+            $impersonatorId = session(ImpersonationService::SESSION_KEY);
+            if (! $impersonatorId) {
+                return;
+            }
+
+            $properties = collect($activity->properties);
+            $properties->put('impersonator_id', (int) $impersonatorId);
+            $activity->properties = $properties;
+        });
+    }
+
+    private function usePlainPasswordResetMail(): void
+    {
+        ResetPasswordNotification::toMailUsing(function ($notifiable, string $token) {
+            $email = $notifiable->getEmailForPasswordReset();
+            $url = url(route('password.reset', [
+                'token' => $token,
+                'email' => $email,
+            ], false));
+            $minutes = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60);
+
+            return new PasswordResetLinkMail($email, $url, $minutes);
+        });
     }
 
     private function configurePasswordDefaults(): void
@@ -40,8 +77,10 @@ class AppServiceProvider extends ServiceProvider
 
             return Password::min(max(8, $min))
                 ->letters()
+                ->mixedCase()
                 ->numbers()
-                ->symbols();
+                ->symbols()
+                ->uncompromised();
         });
     }
 

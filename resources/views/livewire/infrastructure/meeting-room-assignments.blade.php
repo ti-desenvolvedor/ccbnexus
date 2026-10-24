@@ -39,6 +39,6 @@
             <li class="py-4 text-slate-500">Sem atribuições extra.</li>
         @endforelse
     </ul>
-    @error('assignable_type') <p class="mt-2 text-xs text-rose-600">{{ $message }}</p> @enderror
-    @error('assignable_id') <p class="mt-2 text-xs text-rose-600">{{ $message }}</p> @enderror
+    @error('assignable_type') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
+    @error('assignable_id') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
 </x-ui.card>

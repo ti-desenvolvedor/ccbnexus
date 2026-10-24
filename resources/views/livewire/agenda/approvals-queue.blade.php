@@ -33,7 +33,7 @@
                         class="mt-1 w-full min-h-11 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"
                     ></textarea>
                     @error('notes.'.$a->id)
-                        <p class="mt-1 text-sm text-rose-700 dark:text-rose-300" role="alert">{{ $message }}</p>
+                        <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message>
                     @enderror
                     <div class="mt-3 flex flex-col gap-2 sm:flex-row">
                         <button

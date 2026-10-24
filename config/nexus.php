@@ -17,6 +17,8 @@ return [
 
     /*
     | Senha nova: letra + número + símbolo, mínimo de caracteres.
+    | Fraca não grava. O mínimo exige maiúscula e minúscula, número e símbolo. Forte tem 12 caracteres.
+    | Senha encontrada em vazamento também não grava.
     | Login: a partir de captcha_after falhas pede o código da imagem;
     | ao chegar em max_attempts bloqueia por lock_seconds.
     */

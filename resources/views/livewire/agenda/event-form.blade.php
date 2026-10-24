@@ -1,14 +1,22 @@
 <div class="space-y-6">
     <x-ui.card>
-        <form wire:submit="saveDraft" class="mx-auto grid w-full max-w-3xl gap-4">
+        <form wire:submit="saveDraft" data-progress="marked" class="flex w-full min-w-0 flex-col gap-6">
+            <x-nexus.form-progress />
+            @if ($tab !== 'main')
+                @unless (auth()->user()?->isSuperAdmin())
+                    <span hidden data-progress-field data-progress-value="{{ filled($regional_id) ? '1' : '' }}"></span>
+                @endunless
+                <span hidden data-progress-field data-progress-value="{{ filled($starts_at) ? '1' : '' }}"></span>
+                <span hidden data-progress-field data-progress-value="{{ filled($ends_at) ? '1' : '' }}"></span>
+            @endif
             <div>
                 <label for="event-title" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Título do evento</label>
-                <input id="event-title" type="text" wire:model.live.debounce.400ms="title" class="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950" />
-                @error('title') <p class="mt-1 text-sm text-rose-700 dark:text-rose-300" role="alert">{{ $message }}</p> @enderror
+                <input id="event-title" type="text" wire:model.live.debounce.400ms="title" data-progress-field class="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950" />
+                @error('title') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
             </div>
 
-            <div role="tablist" aria-label="Partes do evento" class="flex flex-nowrap gap-2 overflow-x-auto border-b border-slate-200 pb-2 dark:border-slate-800">
-                @foreach (['main' => 'Dados', 'local' => 'Sala', 'audience' => 'Público', 'recurrence' => 'Recorrência', 'structure' => 'Estrutura', 'people' => 'Avisos'] as $tabId => $tabLabel)
+            <div role="tablist" aria-label="Partes do evento" class="grid grid-cols-3 gap-1 border-b border-slate-200 pb-2 dark:border-slate-800 sm:flex sm:flex-nowrap sm:gap-2 sm:overflow-x-auto">
+                @foreach (['main' => 'Dados', 'local' => 'Local', 'audience' => 'Público', 'recurrence' => 'Recorrência', 'structure' => 'Estrutura', 'people' => 'Avisos'] as $tabId => $tabLabel)
                     @php
                         $tabErrors = $tabErrorCounts[$tabId] ?? 0;
                     @endphp
@@ -20,7 +28,7 @@
                         aria-selected="{{ $tab === $tabId ? 'true' : 'false' }}"
                         @if ($tabErrors > 0) aria-invalid="true" @endif
                         wire:click="$set('tab', '{{ $tabId }}')"
-                        @class(['inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-semibold', 'bg-primary-600 text-white' => $tab === $tabId, 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900' => $tab !== $tabId])
+                        @class(['inline-flex min-h-11 shrink-0 flex-wrap items-center justify-center gap-x-2 rounded-lg px-2 text-sm font-semibold sm:justify-start sm:px-3', 'bg-primary-600 text-white' => $tab === $tabId, 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900' => $tab !== $tabId])
                     >
                         <span>{{ $tabLabel }}</span>
                         @if ($tabErrors > 0)
@@ -31,45 +39,61 @@
             </div>
 
             @if ($tab === 'main')
-                <div id="panel-main" role="tabpanel" aria-labelledby="tab-main" class="grid gap-6">
+                <div id="panel-main" role="tabpanel" aria-labelledby="tab-main" class="grid gap-4 lg:grid-cols-3">
                     <div>
                         <label for="event-regional" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Regional</label>
                         <x-nexus.searchable-select id="event-regional" wire:model.live="regional_id" class="mt-1" empty-label="—" search-placeholder="Buscar regional..." :options="$regionals" />
+                        @unless (auth()->user()?->isSuperAdmin())
+                            <span hidden data-progress-field data-progress-value="{{ filled($regional_id) ? '1' : '' }}"></span>
+                        @endunless
                     </div>
                     <div>
                         <label for="event-type" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Tipo</label>
                         <x-nexus.searchable-select id="event-type" wire:model.live="event_type_id" class="mt-1" empty-label="—" search-placeholder="Buscar tipo..." :options="$eventTypes" />
                     </div>
-                    <div class="grid gap-2">
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Quando</h3>
-                        <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <label for="event-starts" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Início</label>
-                            <input id="event-starts" type="datetime-local" wire:model.live="starts_at" class="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950" />
-                            @error('starts_at') <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label for="event-ends" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Fim</label>
-                            <input id="event-ends" type="datetime-local" wire:model.live="ends_at" class="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950" />
-                            @error('ends_at') <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
-                        </div>
-                        </div>
+                    <div>
+                        <label for="event-format" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Formato</label>
+                        <x-nexus.searchable-select
+                            id="event-format"
+                            wire:model.live="attendance_mode"
+                            class="mt-1"
+                            search-placeholder="Buscar formato..."
+                            :options="[
+                                ['value' => 'in_person', 'label' => 'Presencial'],
+                                ['value' => 'online_only', 'label' => 'Somente online'],
+                                ['value' => 'hybrid', 'label' => 'Híbrido (presencial e online)'],
+                            ]"
+                        />
+                        @error('attendance_mode') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                     </div>
-                    <div class="grid gap-2">
-                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Onde</h3>
-                    @if ($attendance_mode !== 'online_only')
-                        <div>
-                            <label for="event-location" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Local</label>
-                            <x-nexus.searchable-select id="event-location" wire:model.live="location_id" class="mt-1" empty-label="—" search-placeholder="Buscar local..." :options="$locations" />
-                        </div>
-                    @else
-                        <p class="text-sm text-amber-800 dark:text-amber-200">Somente online: o local e a sala são limpos ao salvar.</p>
-                    @endif
-                        @if ($attendance_mode !== 'online_only')
-                            <p class="text-sm text-slate-600 dark:text-slate-300">A sala deste local fica na aba Sala.</p>
-                        @endif
+                    <div>
+                        <label for="event-starts" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Início</label>
+                        <input id="event-starts" type="datetime-local" wire:model.live="starts_at" data-progress-field class="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950" />
+                        @error('starts_at') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                     </div>
-                    <div class="grid gap-3">
+                    <div>
+                        <label for="event-ends" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Fim</label>
+                        <input id="event-ends" type="datetime-local" wire:model.live="ends_at" data-progress-field class="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950" />
+                        @error('ends_at') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
+                    </div>
+                    <div>
+                        <label for="event-dress" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Traje</label>
+                        <x-nexus.searchable-select
+                            id="event-dress"
+                            wire:model="dress_code"
+                            class="mt-1"
+                            empty-label="—"
+                            search-placeholder="Buscar traje..."
+                            :options="[
+                                ['value' => 'social', 'label' => 'Social'],
+                                ['value' => 'esporte_fino', 'label' => 'Esporte fino'],
+                            ]"
+                        />
+                    </div>
+                </div>
+            @endif
+            @if ($tab === 'people')
+                    <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label for="event-attendant" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Quem atende</label>
                             @if (! $regional_id)
@@ -85,9 +109,9 @@
                                 />
                                 <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">A mesma lista das marcações: pessoa do ministério já cadastrada nesta regional.</p>
                             @endif
-                            @error('ministry_servant_id') <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
+                            @error('ministry_servant_id') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                             @if (session('attendant_status'))
-                                <p class="mt-1 text-sm text-emerald-800 dark:text-emerald-200" role="status">{{ session('attendant_status') }}</p>
+                                <x-nexus.inline-message tone="success">{{ session('attendant_status') }}</x-nexus.inline-message>
                             @endif
                         </div>
                         @if ($regional_id && $ministryOffices->isNotEmpty())
@@ -99,17 +123,17 @@
                                     <label for="servant-name" class="text-xs font-semibold text-slate-700 dark:text-slate-200">
                                         Nome completo
                                         <input id="servant-name" type="text" wire:model="servant_name" autocomplete="name" class="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-base font-normal dark:border-slate-800 dark:bg-slate-950" />
-                                        @error('servant_name') <span class="mt-1 block text-sm font-medium text-rose-700" role="alert">{{ $message }}</span> @enderror
+                                        @error('servant_name') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                     </label>
                                     <label for="servant-position" class="text-xs font-semibold text-slate-700 dark:text-slate-200">
                                         Ministério
                                         <x-nexus.searchable-select id="servant-position" wire:model="servant_position_id" class="mt-1" empty-label="Escolher cargo…" search-placeholder="Buscar cargo..." :options="$ministryOffices" />
-                                        @error('servant_position_id') <span class="mt-1 block text-sm font-medium text-rose-700" role="alert">{{ $message }}</span> @enderror
+                                        @error('servant_position_id') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                     </label>
                                     <label for="servant-phone" class="text-xs font-semibold text-slate-700 dark:text-slate-200">
                                         Celular com DDD (opcional)
                                         <input id="servant-phone" type="tel" wire:model="servant_phone" inputmode="tel" placeholder="11 98765-4321" class="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-base font-normal tabular-nums dark:border-slate-800 dark:bg-slate-950" />
-                                        @error('servant_phone') <span class="mt-1 block text-sm font-medium text-rose-700" role="alert">{{ $message }}</span> @enderror
+                                        @error('servant_phone') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                     </label>
                                     <button type="button" wire:click="registerAttendant" class="inline-flex min-h-11 w-fit items-center rounded-xl border border-slate-200 px-3 text-sm font-semibold dark:border-slate-800">
                                         Cadastrar e usar neste evento
@@ -138,7 +162,7 @@
                             default => 'neutral',
                         };
                     @endphp
-                    <fieldset class="grid gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                    <fieldset class="grid gap-3 border-t border-slate-200 pt-4 md:col-span-2 dark:border-slate-800">
                         <legend class="text-sm font-semibold text-slate-900 dark:text-slate-100">Publicar</legend>
                         <p class="text-sm text-slate-700 dark:text-slate-200">
                             @if ($canPublishNow)
@@ -159,11 +183,24 @@
                             <input type="checkbox" wire:model.live="whatsapp_enabled" class="rounded" />
                             Envia aviso no WhatsApp
                         </label>
-                        @error('whatsapp_enabled') <p class="text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
+                        @error('whatsapp_enabled') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
+                        <div class="@if (! $whatsapp_enabled) opacity-60 @endif">
+                            <label for="event-wa-template" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Modelo do WhatsApp</label>
+                            <x-nexus.searchable-select
+                                id="event-wa-template"
+                                wire:model="whatsapp_notice_template_id"
+                                class="mt-1"
+                                empty-label="—"
+                                search-placeholder="Buscar modelo..."
+                                :disabled="! $whatsapp_enabled"
+                                :options="\App\Models\WhatsAppNoticeTemplate::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get()"
+                            />
+                            @error('whatsapp_notice_template_id') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
+                        </div>
                     </fieldset>
 
                     <details
-                        class="rounded-xl border border-slate-200 dark:border-slate-800"
+                        class="rounded-xl border border-slate-200 md:col-span-2 dark:border-slate-800"
                         wire:ignore.self
                         wire:key="event-description-panel"
                         x-data
@@ -174,7 +211,7 @@
                         <div class="grid gap-4 px-4 pb-4">
                             <p class="text-sm text-slate-600 dark:text-slate-300">O texto guarda os códigos do modelo. A pré-visualização muda quando a data, a hora, o local, a regional ou o título mudam.</p>
                             <x-ui.simple-editor model="description" :value="$description" :fields="$placeholderFields" live placeholder="Descrição do evento" />
-                            @error('description') <p class="text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
+                            @error('description') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                             @if ($descriptionPreview !== '')
                                 <div>
                                     <div class="text-sm font-semibold text-slate-800 dark:text-slate-100">Como fica neste evento</div>
@@ -191,9 +228,9 @@
                                     <div class="mt-2" wire:key="type-template-editor-{{ $event_type_id }}">
                                         <x-ui.simple-editor model="type_template" :value="$type_template" :fields="$placeholderFields" placeholder="Texto do modelo deste tipo" body-class="min-h-48" />
                                     </div>
-                                    @error('type_template') <p class="text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
+                                    @error('type_template') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                     @if (session('template_status'))
-                                        <p class="mt-2 text-sm text-emerald-800" role="status">{{ session('template_status') }}</p>
+                                        <x-nexus.inline-message tone="success">{{ session('template_status') }}</x-nexus.inline-message>
                                     @endif
                                     <button type="button" wire:click="saveTypeTemplate" class="mt-2 min-h-11 rounded-xl border border-slate-200 px-3 text-sm font-semibold dark:border-slate-800">
                                         Salvar modelo do tipo
@@ -202,73 +239,26 @@
                             @endif
                         </div>
                     </details>
-
-                    <details class="rounded-xl border border-slate-200 dark:border-slate-800" wire:ignore.self wire:key="event-whatsapp-panel">
-                        <summary class="flex min-h-11 cursor-pointer items-center px-4 text-sm font-semibold text-slate-900 dark:text-slate-100">WhatsApp, traje e formato</summary>
-                        <div class="grid gap-4 px-4 pb-4">
-                            <div>
-                                <label for="event-format" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Formato</label>
-                                <x-nexus.searchable-select
-                                    id="event-format"
-                                    wire:model.live="attendance_mode"
-                                    class="mt-1"
-                                    search-placeholder="Buscar formato..."
-                                    :options="[
-                                        ['value' => 'in_person', 'label' => 'Presencial'],
-                                        ['value' => 'online_only', 'label' => 'Somente online'],
-                                        ['value' => 'hybrid', 'label' => 'Híbrido (presencial e online)'],
-                                    ]"
-                                />
-                                @error('attendance_mode') <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
-                            </div>
-                            <div>
-                                <label for="event-dress" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Traje</label>
-                                <x-nexus.searchable-select
-                                    id="event-dress"
-                                    wire:model="dress_code"
-                                    class="mt-1"
-                                    empty-label="—"
-                                    search-placeholder="Buscar traje..."
-                                    :options="[
-                                        ['value' => 'social', 'label' => 'Social'],
-                                        ['value' => 'esporte_fino', 'label' => 'Esporte fino'],
-                                    ]"
-                                />
-                            </div>
-                            <div class="@if (! $whatsapp_enabled) opacity-60 @endif">
-                                <label for="event-wa-template" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Modelo do WhatsApp</label>
-                                <x-nexus.searchable-select
-                                    id="event-wa-template"
-                                    wire:model="whatsapp_notice_template_id"
-                                    class="mt-1"
-                                    empty-label="—"
-                                    search-placeholder="Buscar modelo..."
-                                    :disabled="! $whatsapp_enabled"
-                                    :options="\App\Models\WhatsAppNoticeTemplate::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get()"
-                                />
-                                @error('whatsapp_notice_template_id') <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
-                            </div>
-                        </div>
-                    </details>
-                </div>
             @endif
 
             @if ($tab === 'local')
-                <div id="panel-local" role="tabpanel" aria-labelledby="tab-local" class="grid gap-4">
+                <div id="panel-local" role="tabpanel" aria-labelledby="tab-local" class="grid gap-4 md:grid-cols-2">
                 @if ($attendance_mode === 'online_only')
-                    <p class="text-sm text-slate-600 dark:text-slate-300">Este evento está como somente online. Não precisa de sala.</p>
-                @endif
-                <p class="text-sm text-slate-600 dark:text-slate-300">O local fica em Dados. Aqui só a sala.</p>
-                <div class="space-y-4 @if ($attendance_mode === 'online_only') pointer-events-none opacity-50 @endif">
+                    <p class="text-sm text-amber-800 md:col-span-2 dark:text-amber-200">Somente online: o local e a sala são limpos ao salvar.</p>
+                @else
+                    <div>
+                        <label for="event-location" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Local</label>
+                        <x-nexus.searchable-select id="event-location" wire:model.live="location_id" class="mt-1" empty-label="—" search-placeholder="Buscar local..." :options="$locations" />
+                    </div>
                     <div>
                         <label for="event-room" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Sala</label>
                         <x-nexus.searchable-select id="event-room" wire:model="meeting_room_id" class="mt-1" empty-label="—" search-placeholder="Buscar sala..." :options="$meetingRooms" />
-                        @error('meeting_room_id') <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
-                        @if ($attendance_mode !== 'online_only' && $meetingRooms->isEmpty())
+                        @error('meeting_room_id') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
+                        @if ($meetingRooms->isEmpty())
                             <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Nenhuma sala ativa neste contexto. <a href="{{ route('infrastructure.meeting-rooms.index') }}" wire:navigate class="font-semibold text-primary-700 dark:text-primary-300">Ver salas</a></p>
                         @endif
                     </div>
-                </div>
+                @endif
                 </div>
             @endif
 
@@ -313,7 +303,7 @@
                                     class="flex min-h-11 min-w-0 items-center justify-center rounded-lg px-2 py-2 text-center text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 sm:text-sm @if ($recurrence_frequency === 'yearly') bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700 @else text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 @endif"
                                 ><span>Anual</span></button>
                             </div>
-                            @error('recurrence_frequency') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                            @error('recurrence_frequency') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
 
                             @if ($recurrence_frequency === 'weekly')
                                 <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
@@ -324,7 +314,7 @@
                                         search-placeholder="Buscar intervalo..."
                                         :options="collect(range(1, 12))->map(fn ($w) => ['value' => (string) $w, 'label' => $w === 1 ? 'Todas as semanas' : 'A cada '.$w.' semanas'])"
                                     />
-                                    @error('recurrence_interval_weeks') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                                    @error('recurrence_interval_weeks') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                 </div>
                             @endif
 
@@ -337,7 +327,7 @@
                                         search-placeholder="Buscar intervalo..."
                                         :options="collect(range(1, 20))->map(fn ($y) => ['value' => (string) $y, 'label' => $y === 1 ? 'Todos os anos (anual)' : 'A cada '.$y.' anos'])"
                                     />
-                                    @error('recurrence_interval_years') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                                    @error('recurrence_interval_years') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                     <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">A data e a hora de cada ocorrência seguem o primeiro evento em «Dados» (dia/mês repetem; anos avançam conforme o intervalo).</p>
                                 </div>
                             @endif
@@ -376,7 +366,7 @@
                                                     ['value' => '-1', 'label' => 'Última do mês'],
                                                 ]"
                                             />
-                                            @error('recurrence_monthly_nth') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                                            @error('recurrence_monthly_nth') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                         </div>
                                         <div>
                                             <label class="text-xs font-semibold text-slate-500">Dia da semana</label>
@@ -394,7 +384,7 @@
                                                     ['value' => '6', 'label' => 'Sábado'],
                                                 ]"
                                             />
-                                            @error('recurrence_monthly_weekday') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                                            @error('recurrence_monthly_weekday') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                         </div>
                                     </div>
                                     <div>
@@ -440,7 +430,7 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        @error('recurrence_months_filter') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                                        @error('recurrence_months_filter') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                         @if ($recurrence_months_filter === 'list')
                                             <div class="mt-3 min-w-0 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-900/40">
                                                 <p class="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">Marque os meses</p>
@@ -458,7 +448,7 @@
                                                     @endforeach
                                                 </div>
                                             </div>
-                                            @error('recurrence_months_list') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                                            @error('recurrence_months_list') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                                         @endif
                                     </div>
                                 </div>
@@ -476,7 +466,7 @@
                                     @if (! $recActive) disabled @endif
                                     class="mt-1 min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-base disabled:cursor-not-allowed dark:border-slate-800 dark:bg-slate-950"
                                 />
-                                @error('recurrence_until') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                                @error('recurrence_until') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                             </div>
                             @if ($recurrence_frequency === 'weekly' && $recurrenceSeriesWeekday)
                                 <p class="text-xs text-slate-600 dark:text-slate-300">
@@ -551,32 +541,34 @@
                 <div>
                     <label for="event-expected" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Previsão de participantes</label>
                     <input id="event-expected" type="number" wire:model="expected_attendees" min="0" step="1" placeholder="Opcional" class="mt-1 min-h-11 w-full max-w-xs rounded-xl border border-slate-200 px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950" />
-                    @error('expected_attendees') <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
+                    @error('expected_attendees') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                 </div>
-                <fieldset class="grid gap-1 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+                <fieldset class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
                     <legend class="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">O evento vai precisar de…</legend>
+                    <div class="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
                     <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_sound_controller" class="rounded" /> Controlador de som</label>
                     <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_av" class="rounded" /> Audiovisual</label>
                     <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_parking" class="rounded" /> Estacionamento</label>
                     <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_meals" class="rounded" /> Refeições</label>
+                    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_nursing" class="rounded" /> Enfermagem</label>
+                    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_valet" class="rounded" /> Manobrista</label>
+                    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="has_libras" class="rounded" /> Intérprete de Libras</label>
+                    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_other_materials" class="rounded" /> Outros materiais (especificar)</label>
+                    </div>
                     @if ($needs_meals)
-                        <div class="grid gap-1 pb-2 pl-8">
-                            <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Refeições previstas</p>
+                        <p class="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-100">Refeições previstas</p>
+                        <div class="grid gap-1 sm:grid-cols-2 md:grid-cols-4">
                             <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="meal_coffee" class="rounded" /> Café</label>
                             <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="meal_lunch" class="rounded" /> Almoço</label>
                             <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="meal_snack" class="rounded" /> Lanche</label>
                             <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="meal_dinner" class="rounded" /> Jantar</label>
                         </div>
                     @endif
-                    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_nursing" class="rounded" /> Enfermagem</label>
-                    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_valet" class="rounded" /> Manobrista</label>
-                    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="has_libras" class="rounded" /> Intérprete de Libras</label>
-                    <label class="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" wire:model="needs_other_materials" class="rounded" /> Outros materiais (especificar)</label>
                     @if ($needs_other_materials)
                         <div class="mt-2">
                             <label class="text-xs font-semibold text-slate-500">Especificação</label>
                             <textarea wire:model="other_materials_note" rows="2" placeholder="Ex.: escadas, cordas, cinto de segurança, maca…" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"></textarea>
-                            @error('other_materials_note') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                            @error('other_materials_note') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                         </div>
                     @endif
                 </fieldset>
@@ -584,33 +576,35 @@
             @endif
 
             @if ($tab === 'people')
-                <div id="panel-people" role="tabpanel" aria-labelledby="tab-people" class="grid gap-4">
-                <p class="text-sm text-slate-600 dark:text-slate-300">Quem atende e a lista de batismos ficam em Dados. O intérprete de Libras fica em Estrutura. Aqui estão os grupos do aviso.</p>
-                @unless ($whatsapp_enabled)
-                    <p class="text-sm text-slate-700 dark:text-slate-200">O aviso no WhatsApp está desligado em Dados. Os grupos abaixo só valem quando ele estiver ligado.</p>
-                @endunless
-                @if ($whatsappGroups->isNotEmpty())
-                    <fieldset @class(['grid gap-1 rounded-xl border border-slate-200 p-4 dark:border-slate-800', 'opacity-60' => ! $whatsapp_enabled])>
-                        <legend class="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">Grupos WhatsApp</legend>
-                        @foreach ($whatsappGroups as $g)
-                            <label class="flex min-h-11 items-center gap-2 text-sm">
-                                <input type="checkbox" wire:model="whatsapp_group_ids" value="{{ $g->id }}" class="rounded" />
-                                {{ $g->name }}
-                            </label>
-                        @endforeach
-                    </fieldset>
-                @endif
-                <div>
-                    <button type="button" wire:click="applyAudiencePreset" class="min-h-11 rounded-xl border border-slate-200 px-3 text-sm font-semibold dark:border-slate-800">
-                        Aplicar público do modelo
-                    </button>
-                    @error('audience_preset') <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p> @enderror
-                </div>
+                <div id="panel-people" role="tabpanel" aria-labelledby="tab-people" class="grid min-w-0 gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Grupos do aviso</p>
+                        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Estes grupos recebem o texto quando o aviso no WhatsApp está ligado.</p>
+                        @unless ($whatsapp_enabled)
+                            <p class="mt-1 text-sm text-slate-700 dark:text-slate-200">O aviso está desligado. A escolha fica guardada e só vale quando ele for ligado.</p>
+                        @endunless
+                    </div>
+                    @if ($whatsappGroups->isNotEmpty())
+                        <div @class(['grid min-w-0 gap-1 sm:grid-cols-2', 'opacity-60' => ! $whatsapp_enabled])>
+                            @foreach ($whatsappGroups as $g)
+                                <label class="flex min-h-11 items-center gap-2 text-sm">
+                                    <input type="checkbox" wire:model="whatsapp_group_ids" value="{{ $g->id }}" class="rounded" />
+                                    {{ $g->name }}
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
+                    <div>
+                        <button type="button" wire:click="applyAudiencePreset" class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-3 text-sm font-semibold dark:border-slate-800">
+                            Aplicar público do modelo
+                        </button>
+                        @error('audience_preset') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
+                    </div>
                 </div>
             @endif
 
             @php($canPublishNow = auth()->user()?->isSuperAdmin() || auth()->user()?->can('aprovar_evento'))
-            <div class="flex flex-wrap gap-2 border-t border-slate-200 pt-6 dark:border-slate-800">
+            <div class="flex flex-wrap items-center gap-2 border-t border-slate-200 pt-6 dark:border-slate-800">
                 @if ($status !== 'published')
                     <x-ui.button type="button" wire:click="publish">{{ $canPublishNow ? 'Publicar' : 'Enviar para aprovação' }}</x-ui.button>
                     <x-ui.button type="submit" variant="secondary">Salvar rascunho</x-ui.button>
@@ -627,7 +621,7 @@
                 <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">O evento sai da agenda. A justificativa fica registrada.</p>
                 <label for="cancel-reason" class="mt-3 block text-xs font-semibold text-slate-700 dark:text-slate-200">Justificativa</label>
                 <textarea id="cancel-reason" wire:model="cancel_reason" rows="2" class="mt-1 w-full min-h-11 rounded-xl border border-slate-200 px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950"></textarea>
-                @error('cancel_reason') <p class="mt-1 text-sm text-rose-700" role="alert">Escreva a justificativa para cancelar.</p> @enderror
+                @error('cancel_reason') <x-nexus.inline-message>Escreva a justificativa para cancelar.</x-nexus.inline-message> @enderror
                 <x-ui.button type="button" variant="danger" class="mt-2" wire:click="cancelEvent" wire:confirm="Cancelar {{ $this->event->title }}? O evento sai da agenda.">Cancelar {{ $this->event->title }}</x-ui.button>
             </div>
         @endif

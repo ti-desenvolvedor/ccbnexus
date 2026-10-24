@@ -43,11 +43,17 @@
     </div>
 
     @if (session('photo_status'))
-        <p class="text-sm font-medium text-emerald-200" role="status">{{ session('photo_status') }}</p>
+        <p class="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-200" role="status">
+            <x-nexus.glyph name="check" class="h-4 w-4 shrink-0" />
+            {{ session('photo_status') }}
+        </p>
     @endif
 
     <x-input-error class="text-amber-200" :messages="$errors->get('photo')" />
-    <p x-show="error" x-text="error" x-cloak class="max-w-sm text-center text-sm text-amber-200 lg:text-left"></p>
+    <p x-show="error" x-cloak class="inline-flex max-w-sm items-start gap-1.5 text-center text-sm text-amber-200 lg:text-left" role="alert">
+        <x-nexus.glyph name="alert" class="mt-0.5 h-4 w-4 shrink-0" />
+        <span x-text="error"></span>
+    </p>
 
     <div class="flex max-w-sm flex-col gap-2 text-center text-sm lg:text-left">
         <p class="text-primary-100/80">

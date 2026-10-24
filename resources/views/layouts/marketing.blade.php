@@ -6,6 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ config('app.name') }}</title>
+        <x-favicon />
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
@@ -102,6 +103,7 @@
         </main>
 
         <style>[x-cloak] { display: none !important; }</style>
+        <x-nexus.dialog />
     </body>
 </html>
 

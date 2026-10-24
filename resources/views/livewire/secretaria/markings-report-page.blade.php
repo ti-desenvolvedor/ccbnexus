@@ -179,12 +179,16 @@
     </div>
 
     @if (session('servant_status'))
-        <p class="text-sm font-semibold text-emerald-800 dark:text-emerald-200">{{ session('servant_status') }}</p>
+        <x-nexus.inline-message tone="success" class="font-semibold">{{ session('servant_status') }}</x-nexus.inline-message>
     @endif
 
     <x-modal name="marking-attendant" :show="$errors->isNotEmpty()" focusable maxWidth="lg">
-        <form wire:submit="saveServant" class="space-y-5 p-6">
-            <div class="space-y-1">
+        <form wire:submit="saveServant" data-progress="marked" class="space-y-5 p-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-700 dark:bg-slate-800 dark:text-primary-100">
+                    <x-nexus.glyph name="person" class="h-5 w-5" />
+                </span>
+                <div class="min-w-0 space-y-1">
                 <h2 class="text-lg font-semibold text-slate-900">Quem atende</h2>
                 @if ($markingEvent)
                     <p class="text-sm text-slate-700">
@@ -195,7 +199,10 @@
                 @else
                     <p class="text-sm text-slate-700">O cadastro fica na regional. O celular é opcional. Para marcar um evento, escolha a pessoa em Já cadastrado.</p>
                 @endif
+                </div>
             </div>
+
+            <x-nexus.form-progress />
 
             @if (! $canRegisterServant)
                 <p class="text-sm text-slate-700">Selecione uma regional no contexto para cadastrar quem atende.</p>
@@ -213,7 +220,7 @@
                             search-placeholder="Buscar pessoa..."
                             :options="$servants->map(fn ($servant) => ['value' => (string) $servant->id, 'label' => $servant->full_name.' · '.$servant->ministry])"
                         />
-                        @error('existing_servant_id') <span class="block text-xs font-medium text-rose-700">{{ $message }}</span> @enderror
+                        @error('existing_servant_id') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                         @if ($markingEvent)
                             <button type="button" wire:click="useExistingServant" class="inline-flex min-h-11 items-center rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Marcar este no evento</button>
                         @endif
@@ -224,18 +231,18 @@
                     <p class="text-sm font-semibold text-slate-900">Novo cadastro</p>
                     <label for="servant-name" class="block text-sm font-semibold text-slate-800">
                         Nome completo
-                        <input id="servant-name" type="text" wire:model="servant_name" autocomplete="name" class="mt-1 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" />
-                        @error('servant_name') <span class="mt-1 block text-xs font-medium text-rose-700">{{ $message }}</span> @enderror
+                        <input id="servant-name" type="text" wire:model="servant_name" data-progress-field autocomplete="name" class="mt-1 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" />
+                        @error('servant_name') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                     </label>
                     <label for="servant-position" class="block text-sm font-semibold text-slate-800">
                         Ministério
-                        <x-nexus.searchable-select id="servant-position" wire:model="servant_position_id" class="mt-1" empty-label="Escolher cargo…" search-placeholder="Buscar cargo..." :options="$ministryOffices" />
-                        @error('servant_position_id') <span class="mt-1 block text-xs font-medium text-rose-700">{{ $message }}</span> @enderror
+                        <x-nexus.searchable-select id="servant-position" wire:model="servant_position_id" data-progress-field class="mt-1" empty-label="Escolher cargo…" search-placeholder="Buscar cargo..." :options="$ministryOffices" />
+                        @error('servant_position_id') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                     </label>
                     <label for="servant-phone" class="block text-sm font-semibold text-slate-800">
                         Celular com DDD (opcional)
                         <input id="servant-phone" type="tel" wire:model="servant_phone" inputmode="tel" placeholder="11 98765-4321" class="mt-1 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-normal tabular-nums text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" />
-                        @error('servant_phone') <span class="mt-1 block text-xs font-medium text-rose-700">{{ $message }}</span> @enderror
+                        @error('servant_phone') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                     </label>
                 </div>
             @endif

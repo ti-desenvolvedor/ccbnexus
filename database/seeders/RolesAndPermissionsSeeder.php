@@ -46,6 +46,9 @@ class RolesAndPermissionsSeeder extends Seeder
             // Governança transversal (AGENTS.md)
             'atuar_como_facilitador',
             'moderar_conteudo',
+
+            // Suporte: não entra em nenhum papel por omissão. Atribuição explícita.
+            'personificar_usuario',
         ];
 
         foreach ($permissions as $permission) {
@@ -56,9 +59,13 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         $all = Permission::query()->where('guard_name', 'web')->pluck('name')->all();
+        $withoutImpersonation = array_values(array_filter(
+            $all,
+            fn (string $name): bool => $name !== 'personificar_usuario',
+        ));
 
         $rolePermissions = [
-            'Administrador' => $all,
+            'Administrador' => $withoutImpersonation,
             'Secretaria' => [
                 'criar_evento',
                 'editar_evento',

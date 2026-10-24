@@ -54,7 +54,7 @@
                         <label class="text-xs font-semibold text-slate-500">Template</label>
                         <x-nexus.searchable-select wire:model="selected_template_id" class="mt-1" empty-label="—" search-placeholder="Buscar modelo..." :options="$templates" />
                         @error('selected_template_id')
-                            <p class="text-xs text-rose-600">{{ $message }}</p>
+                            <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message>
                         @enderror
                         <div class="mt-2 flex flex-wrap gap-2">
                             <x-ui.button size="sm" type="button" wire:click="generate">Gerar rascunho</x-ui.button>

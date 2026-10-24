@@ -4,6 +4,8 @@ namespace App\Livewire\Users;
 
 use App\Livewire\Concerns\UsesAccountPagination;
 use App\Models\User;
+use App\Services\Auth\ImpersonationService;
+use App\Services\Auth\PasswordResetLinkService;
 use App\Services\UserManagementService;
 use App\Support\PasswordStrength;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,6 +21,14 @@ class UserList extends Component
 
     public string $strength = '';
 
+    public ?string $statusMessage = null;
+
+    public ?int $impersonateUserId = null;
+
+    public string $impersonateName = '';
+
+    public string $justification = '';
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -27,6 +37,48 @@ class UserList extends Component
     public function updatingStrength(): void
     {
         $this->resetPage();
+    }
+
+    public function sendPasswordReset(int $userId, PasswordResetLinkService $links): void
+    {
+        $target = User::query()->findOrFail($userId);
+        $this->authorize('sendPasswordReset', $target);
+
+        $links->send(auth()->user(), $target);
+
+        $this->statusMessage = 'Link de redefinição enviado para '.$target->email.'. A senha não é mostrada.';
+    }
+
+    public function askImpersonation(int $userId): void
+    {
+        $target = User::query()->findOrFail($userId);
+        $this->authorize('impersonate', $target);
+
+        $this->impersonateUserId = $target->id;
+        $this->impersonateName = $target->name;
+        $this->justification = '';
+        $this->resetErrorBag('justification');
+    }
+
+    public function cancelImpersonation(): void
+    {
+        $this->impersonateUserId = null;
+        $this->impersonateName = '';
+        $this->justification = '';
+    }
+
+    public function startImpersonation(ImpersonationService $impersonation): void
+    {
+        if (! $this->impersonateUserId) {
+            return;
+        }
+
+        $target = User::query()->findOrFail($this->impersonateUserId);
+        $this->authorize('impersonate', $target);
+
+        $impersonation->start(auth()->user(), $target, $this->justification);
+
+        $this->redirect(route('dashboard'), navigate: false);
     }
 
     public function render(UserManagementService $users)
@@ -50,6 +102,8 @@ class UserList extends Component
                     ->orWhere('password_strength', PasswordStrength::UNKNOWN)
                     ->orWhereNull('password_strength');
             });
+        } elseif ($this->strength === PasswordStrength::MEDIUM) {
+            $query->where('password_strength', PasswordStrength::MEDIUM);
         } elseif ($this->strength === PasswordStrength::STRONG) {
             $query->where('password_strength', PasswordStrength::STRONG);
         }

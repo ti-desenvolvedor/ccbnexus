@@ -86,22 +86,22 @@
                         </p>
                         <div class="flex flex-col gap-2">
                             @can('gerenciar_usuarios')
-                                <x-ui.button variant="secondary" size="sm" href="{{ route('users.index') }}" wire:navigate class="justify-center">
+                                <x-ui.button variant="secondary" size="sm" href="{{ route('users.index') }}" wire:navigate class="min-h-11 justify-center">
                                     {{ __('Gerir utilizadores') }}
                                 </x-ui.button>
                             @endcan
                             @can('viewAny', App\Models\Approval::class)
-                                <x-ui.button variant="secondary" size="sm" href="{{ route('agenda.approvals.index') }}" wire:navigate class="justify-center">
+                                <x-ui.button variant="secondary" size="sm" href="{{ route('agenda.approvals.index') }}" wire:navigate class="min-h-11 justify-center">
                                     {{ __('Aprovações de agenda') }}
                                 </x-ui.button>
                             @endcan
                             @can('gerenciar_avisos')
-                                <x-ui.button variant="secondary" size="sm" href="{{ route('agenda.whatsapp.index') }}" wire:navigate class="justify-center">
+                                <x-ui.button variant="secondary" size="sm" href="{{ route('agenda.whatsapp.index') }}" wire:navigate class="min-h-11 justify-center">
                                     {{ __('Notificações WhatsApp') }}
                                 </x-ui.button>
                             @endcan
                             @can('viewAny', App\Models\AccessRequest::class)
-                                <x-ui.button variant="secondary" size="sm" href="{{ route('access.requests.index') }}" wire:navigate class="justify-center">
+                                <x-ui.button variant="secondary" size="sm" href="{{ route('access.requests.index') }}" wire:navigate class="min-h-11 justify-center">
                                     {{ __('Pedidos de acesso') }}
                                 </x-ui.button>
                             @endcan

@@ -55,7 +55,7 @@
     <div
         class="fixed inset-0 z-[80] flex items-start justify-center bg-slate-950/50 px-4 pt-[12vh]"
         @click.self="close()"
-        @keydown.escape.window="close()"
+        @keydown.escape.window="if (!$store.nexusDialog?.open) close()"
     >
         <div
             class="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"

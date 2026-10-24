@@ -75,6 +75,7 @@
         })"
     @endif
     x-on:click.window="closeIfOutside($event)"
+    x-bind:data-progress-value="selectedLabel"
     {{ $attributes->whereDoesntStartWith('wire:model')->except(['aria-label', 'disabled'])->merge(['class' => 'relative min-w-0']) }}
 >
     <button

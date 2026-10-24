@@ -32,6 +32,7 @@ class LoginForm extends Form
      */
     public function authenticate(): void
     {
+        $this->ensureIpIsNotFlooded();
         $this->ensureIsNotRateLimited();
         $this->ensureCaptchaMatches();
 
@@ -101,6 +102,24 @@ class LoginForm extends Form
             RateLimiter::clear($this->throttleKey());
             $this->throwLockout();
         }
+    }
+
+    protected function ensureIpIsNotFlooded(): void
+    {
+        $key = 'login-ip|'.request()->ip();
+
+        if (RateLimiter::tooManyAttempts($key, 20)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            throw ValidationException::withMessages([
+                'form.email' => trans('auth.throttle', [
+                    'seconds' => $seconds,
+                    'minutes' => (int) ceil($seconds / 60),
+                ]),
+            ]);
+        }
+
+        RateLimiter::hit($key, 60);
     }
 
     /**

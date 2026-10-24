@@ -22,7 +22,7 @@
         </div>
 
         @if ($confirmationBlocked && ! $checkedByMe)
-            <p class="mt-3 text-sm font-semibold text-amber-950 dark:text-amber-100" role="status">Publique ou oculte os itens pendentes antes de marcar verificado.</p>
+            <x-nexus.alert tone="warning" class="mt-3">Publique ou oculte os itens pendentes antes de marcar verificado.</x-nexus.alert>
         @elseif ($canCheckList)
             <button
                 type="button"
@@ -35,7 +35,7 @@
                 {{ $checkedByMe ? 'Verificado' : 'Marcar verificado' }}
             </button>
             @error('list_check')
-                <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p>
+                <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message>
             @enderror
             <x-modal name="baptism-check" focusable maxWidth="md">
                 <div role="dialog" aria-modal="true" aria-labelledby="baptism-check-title" class="bg-white dark:bg-slate-950">
@@ -101,7 +101,7 @@
                     @elseif ($checks->isEmpty())
                         <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Falta pelo menos uma verificação para liberar a aprovação final.</p>
                     @elseif ($confirmationBlocked)
-                        <p class="mt-1 text-sm font-semibold text-amber-950 dark:text-amber-100" role="status">Publique ou oculte os itens pendentes antes de aprovar a publicação.</p>
+                        <x-nexus.alert tone="warning" class="mt-1">Publique ou oculte os itens pendentes antes de aprovar a publicação.</x-nexus.alert>
                     @elseif ($canApprovePublication)
                         <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">A confirmação publica esta revisão.</p>
                     @else
@@ -174,12 +174,12 @@
                             <label for="baptism-rejection-reason" class="mt-4 block text-xs font-semibold text-slate-700 dark:text-slate-200">O que precisa ajustar</label>
                             <textarea id="baptism-rejection-reason" wire:model="rejection_reason" rows="3" class="mt-1 w-full min-h-11 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"></textarea>
                             @error('rejection_reason')
-                                <p class="mt-1 text-sm text-rose-700" role="alert">{{ $message }}</p>
+                                <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message>
                             @enderror
                         </div>
                         <footer class="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:justify-end dark:border-slate-800 dark:bg-slate-900">
                             <button type="button" x-on:click="$dispatch('close')" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">Cancelar</button>
-                            <button type="submit" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Reprovar</button>
+                            <button type="submit" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">{!! $adjustIcon !!} Reprovar</button>
                         </footer>
                     </form>
                 </x-modal>

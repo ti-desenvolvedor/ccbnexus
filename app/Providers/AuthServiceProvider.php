@@ -26,7 +26,12 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerPolicies();
 
         // Super-admin passa em can:/middleware de permissão (ex.: visualizar_relatorios).
+        // impersonate fica de fora: a policy recusa a própria conta, super-admin e personificação encadeada.
         Gate::before(function (?User $user, string $ability) {
+            if ($ability === 'impersonate') {
+                return null;
+            }
+
             if ($user?->isSuperAdmin()) {
                 return true;
             }

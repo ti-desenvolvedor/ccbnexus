@@ -8,21 +8,37 @@ class PasswordStrength
 {
     public const STRONG = 'strong';
 
+    public const MEDIUM = 'medium';
+
     public const WEAK = 'weak';
 
     public const UNKNOWN = 'unknown';
 
+    public const STRONG_LENGTH = 12;
+
+    public static function minLength(): int
+    {
+        return max(8, (int) config('nexus.auth.password_min', 8));
+    }
+
     public static function level(string $plain): string
     {
-        $min = max(8, (int) config('nexus.auth.password_min', 8));
-        $longEnough = mb_strlen($plain) >= $min;
+        $length = mb_strlen($plain);
         $hasLetter = preg_match('/\p{L}/u', $plain) === 1;
         $hasNumber = preg_match('/\p{N}/u', $plain) === 1;
-        $hasSymbol = preg_match('/[^\p{L}\p{N}]/u', $plain) === 1;
+        $hasSymbol = preg_match('/[\p{Z}\p{S}\p{P}]/u', $plain) === 1;
 
-        return $longEnough && $hasLetter && $hasNumber && $hasSymbol
-            ? self::STRONG
-            : self::WEAK;
+        $hasMixed = preg_match('/\p{Ll}/u', $plain) === 1 && preg_match('/\p{Lu}/u', $plain) === 1;
+
+        if ($plain === '' || $length < self::minLength() || ! $hasLetter || ! $hasNumber || ! $hasSymbol || ! $hasMixed) {
+            return self::WEAK;
+        }
+
+        if ($length >= self::STRONG_LENGTH) {
+            return self::STRONG;
+        }
+
+        return self::MEDIUM;
     }
 
     /**
@@ -39,7 +55,8 @@ class PasswordStrength
     public static function label(?string $level): string
     {
         return match ($level) {
-            self::STRONG => 'Adequada',
+            self::STRONG => 'Forte',
+            self::MEDIUM => 'Média',
             self::WEAK => 'Fraca',
             default => 'Não verificada',
         };
@@ -49,6 +66,7 @@ class PasswordStrength
     {
         return match ($level) {
             self::STRONG => 'success',
+            self::MEDIUM => 'warning',
             self::WEAK => 'danger',
             default => 'warning',
         };
@@ -56,6 +74,6 @@ class PasswordStrength
 
     public static function needsChange(?string $level): bool
     {
-        return $level !== self::STRONG;
+        return $level === null || $level === self::WEAK || $level === self::UNKNOWN;
     }
 }

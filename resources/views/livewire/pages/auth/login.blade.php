@@ -40,6 +40,7 @@ new #[Layout('layouts.guest')] class extends Component
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
     <form wire:submit="login">
+        <x-nexus.form-progress class="mb-4" />
         <!-- Email Address -->
         <div>
             <x-input-label for="email" :value="__('Email')" />
@@ -57,6 +58,16 @@ new #[Layout('layouts.guest')] class extends Component
                             required autocomplete="current-password" />
 
             <x-input-error :messages="$errors->get('form.password')" class="mt-2" />
+
+            @if (Route::has('password.request'))
+                <a
+                    href="{{ route('password.request') }}"
+                    wire:navigate
+                    class="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-gray-800 underline decoration-gray-400 underline-offset-4 hover:text-gray-950 focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-primary-500"
+                >
+                    Esqueci minha senha
+                </a>
+            @endif
         </div>
 
         @if ($form->captchaRequired())
@@ -89,14 +100,9 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
 
         <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}" wire:navigate>
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
-
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
+            <x-primary-button wire:loading.attr="disabled" wire:target="login">
+                <span wire:loading.remove wire:target="login">{{ __('Log in') }}</span>
+                <span wire:loading wire:target="login">Entrando…</span>
             </x-primary-button>
         </div>
     </form>

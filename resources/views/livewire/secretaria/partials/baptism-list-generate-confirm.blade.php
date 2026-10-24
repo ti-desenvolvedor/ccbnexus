@@ -1,6 +1,8 @@
 @php
     $closeIcon = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>';
     $refreshIcon = '<svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 12a8 8 0 00-13.7-5.6L4 8"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4v4h4"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12a8 8 0 0013.7 5.6L20 16"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 20v-4h-4"/></svg>';
+    $restoreIcon = '<svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 109-9"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 4v5h5"/></svg>';
+    $calendarIcon = '<svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" stroke-width="2"/><path stroke-width="2" stroke-linecap="round" d="M8 3.5v4M16 3.5v4M4 10h16"/></svg>';
     $revisionIcon = '<svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 3h8l5 5v13H7z"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15 3v5h5"/><path stroke-width="2" stroke-linecap="round" d="M12 12v5M9.5 14.5h5"/></svg>';
     $nextRevision = sprintf('%02d', ((int) ($report->revision ?? 0)) + 1);
 @endphp
@@ -46,7 +48,7 @@
             <button type="button" x-on:click="$dispatch('close')" aria-label="Fechar" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-slate-300 dark:hover:bg-slate-900">{!! $closeIcon !!}</button>
         </header>
         <div class="flex items-center gap-4 px-4 py-6">
-            <span class="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{!! $refreshIcon !!}</span>
+            <span class="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{!! $restoreIcon !!}</span>
             <p class="min-w-0 text-sm leading-relaxed text-slate-600 dark:text-slate-300">As janelas voltam ao padrão e a lista é gerada de novo. As verificações e a aprovação desta revisão são apagadas.</p>
         </div>
         <footer class="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:justify-end dark:border-slate-800 dark:bg-slate-900">
@@ -63,7 +65,7 @@
             <button type="button" x-on:click="$dispatch('close')" aria-label="Fechar" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-slate-300 dark:hover:bg-slate-900">{!! $closeIcon !!}</button>
         </header>
         <div class="flex items-center gap-4 px-4 py-6">
-            <span class="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{!! $refreshIcon !!}</span>
+            <span class="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">{!! $calendarIcon !!}</span>
             <p class="min-w-0 text-sm leading-relaxed text-slate-600 dark:text-slate-300">A lista é gerada de novo com estas datas. As verificações e a aprovação desta revisão são apagadas.</p>
         </div>
         <footer class="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:justify-end dark:border-slate-800 dark:bg-slate-900">

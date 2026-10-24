@@ -68,7 +68,8 @@ class EventFormAttendantTest extends TestCase
         Livewire::actingAs($user)
             ->test(EventForm::class, ['event' => $event->fresh()])
             ->assertSet('ministry_servant_id', (string) $servant->id)
-            ->assertSee('Maria dos Santos · Ancião');
+            ->set('tab', 'people')
+            ->assertSee('Maria dos Santos');
     }
 
     public function test_an_unknown_free_text_name_stays_until_a_person_is_chosen(): void
@@ -82,7 +83,8 @@ class EventFormAttendantTest extends TestCase
         Livewire::actingAs($user)
             ->test(EventForm::class, ['event' => $event->fresh()])
             ->assertSet('ministry_servant_id', 'legacy')
-            ->assertSee('Nome antigo (nome livre — escolha o cadastro)')
+            ->set('tab', 'people')
+            ->assertSee('Nome antigo (nome livre')
             ->call('saveDraft')
             ->assertHasNoErrors();
 

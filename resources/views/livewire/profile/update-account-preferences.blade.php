@@ -23,9 +23,7 @@
         </x-slot>
 
         @if (session('preferences_status'))
-            <p class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300" role="status">
-                {{ session('preferences_status') }}
-            </p>
+            <x-nexus.alert tone="success" class="mb-4">{{ session('preferences_status') }}</x-nexus.alert>
         @endif
 
         <form wire:submit="save" class="space-y-8">

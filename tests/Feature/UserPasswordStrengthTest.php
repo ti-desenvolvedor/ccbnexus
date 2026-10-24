@@ -17,7 +17,9 @@ class UserPasswordStrengthTest extends TestCase
     {
         $this->assertSame(PasswordStrength::WEAK, PasswordStrength::level('sem-numero'));
         $this->assertSame(PasswordStrength::WEAK, PasswordStrength::level('Senha1234'));
-        $this->assertSame(PasswordStrength::STRONG, PasswordStrength::level('Igreja2026!'));
+        $this->assertSame(PasswordStrength::WEAK, PasswordStrength::level('nova-senha1'));
+        $this->assertSame(PasswordStrength::MEDIUM, PasswordStrength::level('Nova-senha1'));
+        $this->assertSame(PasswordStrength::STRONG, PasswordStrength::level('CcbNexus-2026!'));
     }
 
     public function test_user_list_shows_password_level_and_filters_who_must_change(): void
@@ -32,6 +34,10 @@ class UserPasswordStrengthTest extends TestCase
             'name' => 'Conta antiga',
             'password_strength' => PasswordStrength::UNKNOWN,
         ]);
+        $medium = User::factory()->create([
+            'name' => 'Conta media',
+            'password_strength' => PasswordStrength::MEDIUM,
+        ]);
         $strong = User::factory()->create([
             'name' => 'Conta adequada',
             'password_strength' => PasswordStrength::STRONG,
@@ -45,15 +51,21 @@ class UserPasswordStrengthTest extends TestCase
             ->assertSee('Conta adequada')
             ->assertSee('Fraca')
             ->assertSee('Não verificada')
-            ->assertSee('Adequada')
+            ->assertSee('Forte')
             ->assertSee('Peça a troca')
             ->set('strength', 'review')
             ->assertSee($weak->name)
             ->assertSee($unknown->name)
+            ->assertDontSee($medium->name)
             ->assertDontSee($strong->name)
             ->set('strength', 'strong')
             ->assertSee($strong->name)
             ->assertDontSee($weak->name)
-            ->assertDontSee($unknown->name);
+            ->assertDontSee($unknown->name)
+            ->assertDontSee($medium->name)
+            ->set('strength', 'medium')
+            ->assertSee($medium->name)
+            ->assertDontSee($strong->name)
+            ->assertDontSee($weak->name);
     }
 }

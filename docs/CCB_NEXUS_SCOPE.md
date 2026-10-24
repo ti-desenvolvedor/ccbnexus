@@ -58,7 +58,7 @@ Ordem fixa em cada entrega:
 
 | Área                         | Estado atual | Observação |
 |-----------------------------|--------------|------------|
-| Auth / perfil               | `dashboard`, `profile`, `auth.php`, pedido de acesso | Preferir fluxo solicitação→aprovação; restringir self-register em produção |
+| Auth / perfil               | `dashboard`, `profile`, `auth.php`, pedido de acesso; `/forgot-password` e `/reset-password/{token}` já existem | O login só mostra “Esqueceu a senha?” pequeno e cinza. Falta envio do link pelo admin e impersonate de suporte |
 | RBAC                        | Spatie roles/permissions + Policies | `teams=false`; papéis ainda globais (débito: escopo por regional) |
 | Organização                 | `regionals`, `administrations`, `prayer_houses` + `location_id` opcional | Hierarquia multi-regional implementada |
 | Locais                      | Tabela **`locations`** com dono `administration_id` XOR `regional_id` | Preferir `locations` nos forms; `addresses` morph = legado |
@@ -80,6 +80,7 @@ Ordem fixa em cada entrega:
 4. UX Facilitador: menu, command palette, calendário semanal de salas, empty states, contexto no topbar.
 5. ~~Policies ainda **permission-only** em Parking / catálogo / templates WhatsApp / Approvals queue.~~ *(Etapa 3: checks de regional/escopo aplicados.)*
 6. **Pessoas** N:N e módulo Avisos/Relatórios ricos — fatias futuras (ver `AGENTS.md`).
+7. ~~**Senha e suporte:** tornar “Esqueci minha senha” óbvio no login; na lista de usuários, enviar o link de redefinição (sem mostrar senha); impersonate com permissão, escopo, justificativa e auditoria.~~ Entregue. A permissão `personificar_usuario` não entra nos papéis atuais; super-admin personifica sem ela. RBAC escopado continua em seguida.
 
 ### 4.4 Públicos — resumo para arquitetura
 

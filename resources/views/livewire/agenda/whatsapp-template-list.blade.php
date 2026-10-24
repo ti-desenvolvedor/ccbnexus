@@ -9,21 +9,20 @@
 
     @if ($show_form)
         <x-ui.card>
-            <form wire:submit="save" class="grid gap-4">
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div>
-                        <label class="text-xs font-semibold text-slate-500">{{ __('Nome') }}</label>
-                        <input type="text" wire:model.live="name" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
-                        @error('name') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
-                    </div>
+            <form wire:submit="save" data-progress="marked" class="grid w-full min-w-0 gap-4 md:grid-cols-2">
+                <x-nexus.form-progress />
+                <div class="md:col-span-2">
+                    <label class="text-xs font-semibold text-slate-500">{{ __('Nome') }}</label>
+                    <input type="text" wire:model.live="name" data-progress-field class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
+                    @error('name') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                 </div>
-                <div>
+                <div class="md:col-span-2">
                     <label class="text-xs font-semibold text-slate-500">Corpo</label>
-                    <textarea wire:model="body" rows="10" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"></textarea>
+                    <textarea wire:model="body" data-progress-field rows="10" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"></textarea>
                     <p class="mt-1 text-xs text-slate-500">Placeholders: {event_title}, {date}, {time}, {weekday}, {location}, {location_hybrid}, {dress_code}, {audience_text}, {notes}, {link}, {signature}</p>
-                    @error('body') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                    @error('body') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                 </div>
-                <div class="flex flex-wrap gap-6">
+                <div class="flex flex-wrap gap-6 md:col-span-2">
                     <label class="inline-flex items-center gap-2 text-sm">
                         <input type="checkbox" wire:model="is_active" class="rounded" />
                         <span>{{ __('Ativo') }}</span>
@@ -36,7 +35,7 @@
                     @endcan
                 </div>
 
-                <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+                <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-4 md:col-span-2 dark:border-slate-800">
                     <x-ui.button type="submit">{{ __('Guardar') }}</x-ui.button>
                     <x-ui.button type="button" variant="secondary" wire:click="$set('show_form', false)">{{ __('Cancelar') }}</x-ui.button>
                 </div>

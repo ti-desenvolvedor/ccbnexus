@@ -2,7 +2,7 @@
     <div class="mb-4">
         <label class="text-xs font-semibold text-slate-500">{{ __('Justificativa (obrigatória)') }}</label>
         <textarea wire:model="review_note" rows="2" class="mt-1 w-full min-h-[44px] rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"></textarea>
-        @error('review_note') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+        @error('review_note') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
     </div>
 
     <div class="hidden overflow-x-auto md:block">

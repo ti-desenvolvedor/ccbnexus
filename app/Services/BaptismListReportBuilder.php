@@ -294,9 +294,11 @@ class BaptismListReportBuilder
                 ->first();
 
             $revision = 0;
+            $hiddenSections = BaptismListSectionVisibility::hiddenSections($existing);
             if ($existing && $bumpRevision) {
                 $revision = (int) $existing->revision + 1;
                 $resolvedPeriods = $this->normalizeSectionPeriods($sectionPeriods ?? $defaults, $defaults);
+                $visibilityMap = $this->visibilityMap($existing);
                 $report = BaptismListReport::query()->create([
                     'regional_id' => $regionalId,
                     'issue_date' => $issue,
@@ -307,17 +309,11 @@ class BaptismListReportBuilder
                     'status' => BaptismListReport::STATUS_DRAFT,
                     'generated_by' => $user->id,
                     'generated_at' => now(),
-                    'meta' => ['section_periods' => $resolvedPeriods],
+                    'meta' => ['section_periods' => $resolvedPeriods, 'hidden_sections' => $hiddenSections],
                 ]);
-                $visibilityMap = [];
             } elseif ($existing) {
                 $report = $existing;
-                $visibilityMap = $report->items()
-                    ->get()
-                    ->mapWithKeys(fn (BaptismListReportItem $item) => [
-                        $item->source_type.':'.($item->source_id ?? '0').':'.$item->section_key => $item->is_visible,
-                    ])
-                    ->all();
+                $visibilityMap = $this->visibilityMap($report);
                 $preserved = is_array($report->meta['section_periods'] ?? null)
                     ? $report->meta['section_periods']
                     : [];
@@ -365,7 +361,7 @@ class BaptismListReportBuilder
                     'baptism_list_report_id' => $report->id,
                     'section_key' => $item['section_key'],
                     'sort_order' => ++$sort,
-                    'is_visible' => $visibilityMap[$key] ?? true,
+                    'is_visible' => $visibilityMap[$key] ?? ! in_array($item['section_key'], $hiddenSections, true),
                     'source_type' => $item['source_type'],
                     'source_id' => $item['source_id'],
                     'payload' => $item['payload'],
@@ -378,7 +374,7 @@ class BaptismListReportBuilder
                     'baptism_list_report_id' => $report->id,
                     'section_key' => $item['section_key'],
                     'sort_order' => ++$sort,
-                    'is_visible' => $visibilityMap[$key] ?? true,
+                    'is_visible' => $visibilityMap[$key] ?? ! in_array($item['section_key'], $hiddenSections, true),
                     'source_type' => $item['source_type'],
                     'source_id' => $item['source_id'],
                     'payload' => $item['payload'],
@@ -391,7 +387,7 @@ class BaptismListReportBuilder
                     'baptism_list_report_id' => $report->id,
                     'section_key' => $item['section_key'],
                     'sort_order' => ++$sort,
-                    'is_visible' => $visibilityMap[$key] ?? true,
+                    'is_visible' => $visibilityMap[$key] ?? ! in_array($item['section_key'], $hiddenSections, true),
                     'source_type' => $item['source_type'],
                     'source_id' => $item['source_id'],
                     'payload' => $item['payload'],
@@ -404,7 +400,7 @@ class BaptismListReportBuilder
                     'baptism_list_report_id' => $report->id,
                     'section_key' => $item['section_key'],
                     'sort_order' => ++$sort,
-                    'is_visible' => $visibilityMap[$key] ?? true,
+                    'is_visible' => $visibilityMap[$key] ?? ! in_array($item['section_key'], $hiddenSections, true),
                     'source_type' => $item['source_type'],
                     'source_id' => $item['source_id'],
                     'payload' => $item['payload'],
@@ -413,6 +409,19 @@ class BaptismListReportBuilder
 
             return $report->fresh(['items', 'regional']);
         });
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    protected function visibilityMap(BaptismListReport $report): array
+    {
+        return $report->items()
+            ->get()
+            ->mapWithKeys(fn (BaptismListReportItem $item) => [
+                $item->source_type.':'.($item->source_id ?? '0').':'.$item->section_key => $item->is_visible,
+            ])
+            ->all();
     }
 
     /**

@@ -80,13 +80,14 @@ new class extends Component
         </x-slot>
 
     <form wire:submit="updateProfileInformation" class="space-y-6">
+        <x-nexus.form-progress />
         <div>
             <x-input-label for="name" :value="__('Name')" />
             <x-text-input wire:model="name" id="name" name="name" type="text" class="mt-1 block w-full" required autofocus autocomplete="name" />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
 
-        <div>
+        <div data-progress="skip">
             <x-input-label for="phone" value="Telefone" />
             <x-text-input wire:model="phone" id="phone" name="phone" type="tel" class="mt-1 block w-full" autocomplete="tel" />
             <x-input-error class="mt-2" :messages="$errors->get('phone')" />
@@ -108,9 +109,9 @@ new class extends Component
                     </p>
 
                     @if (session('status') === 'verification-link-sent')
-                        <p class="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                        <x-nexus.inline-message tone="success">
                             {{ __('A new verification link has been sent to your email address.') }}
-                        </p>
+                        </x-nexus.inline-message>
                     @endif
                 </div>
             @endif

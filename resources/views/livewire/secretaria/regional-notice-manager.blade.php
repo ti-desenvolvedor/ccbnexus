@@ -5,11 +5,13 @@
             Permanentes (Halloween, Eleições…) entram em todas as listas. Os demais são específicos por período de vigência.
         </p>
     </div>
-    @if (session('status')) <p class="text-sm text-emerald-700">{{ session('status') }}</p> @endif
-    <form wire:submit="save" class="grid gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-        <input type="text" wire:model="title" placeholder="Título" class="rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
-        <textarea wire:model="body" rows="4" placeholder="Texto" class="rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950"></textarea>
+    @if (session('status')) <x-nexus.alert tone="success">{{ session('status') }}</x-nexus.alert> @endif
+    <form wire:submit="save" data-progress="marked" class="grid w-full min-w-0 gap-3 rounded-xl border border-slate-200 p-4 md:grid-cols-2 dark:border-slate-800">
+        <x-nexus.form-progress />
+        <input type="text" wire:model="title" data-progress-field placeholder="Título" class="rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2 dark:border-slate-800 dark:bg-slate-950" />
+        <textarea wire:model="body" data-progress-field rows="4" placeholder="Texto" class="rounded-xl border border-slate-200 px-3 py-2 text-sm md:col-span-2 dark:border-slate-800 dark:bg-slate-950"></textarea>
         <x-nexus.searchable-select
+            data-progress-field
             wire:model="category"
             search-placeholder="Buscar categoria..."
             :options="[
@@ -18,25 +20,25 @@
                 ['value' => 'circular', 'label' => 'Circular'],
             ]"
         />
-        <label class="inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" wire:model="is_standing" class="rounded" />
-            Sempre na Lista de Batismos (aviso permanente)
-        </label>
         <div>
             <label class="text-xs font-semibold text-slate-500">Ordem no boletim</label>
             <input type="number" wire:model="sort_order" min="0" max="9999" class="mt-1 w-28 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
         </div>
-        <div class="grid gap-2 sm:grid-cols-2">
+        <label class="inline-flex items-center gap-2 text-sm md:col-span-2">
+            <input type="checkbox" wire:model="is_standing" class="rounded" />
+            Sempre na Lista de Batismos (aviso permanente)
+        </label>
+        <div class="grid gap-2 sm:grid-cols-2 md:col-span-2">
             <div>
                 <label class="text-xs font-semibold text-slate-500">Válido de</label>
-                <input type="date" wire:model="valid_from" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
+                <input type="date" wire:model="valid_from" data-progress-field class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
             </div>
             <div>
                 <label class="text-xs font-semibold text-slate-500">Válido até</label>
-                <input type="date" wire:model="valid_until" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
+                <input type="date" wire:model="valid_until" data-progress-field class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" />
             </div>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2 md:col-span-2">
             <button class="rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white">Guardar</button>
             <button type="button" wire:click="resetForm" class="rounded-xl border px-4 py-2 text-sm">Limpar</button>
         </div>

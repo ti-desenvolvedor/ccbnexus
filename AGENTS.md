@@ -121,6 +121,7 @@ O cadastro plano de “público” (`Audience` com nome/slug apenas) é **insufi
 | Feito | Docs `DEPRECATE_AUDIENCES.md` + `RBAC_SCOPED_DESIGN.md` |
 | Feito | Revisão 2026-10: escrita da secretaria separada de `visualizar_relatorios`; registo sem regional invisível fora do super-admin; pedido de acesso não cruza regional |
 | Feito | Lista de batismos: verificação por pessoa (botão verificado) e aprovação da publicação só com pelo menos uma verificação |
+| Feito | Recuperar senha visível no login; admin envia link de redefinição; impersonate de suporte com auditoria (`personificar_usuario` fora dos papéis por omissão) |
 | Próximo | RBAC escopado (decisão de produto em `docs/RBAC_SCOPED_DESIGN.md`); retirar CRUD `audiences`; pessoas N:N |
 
 ### Impeccable (UI)

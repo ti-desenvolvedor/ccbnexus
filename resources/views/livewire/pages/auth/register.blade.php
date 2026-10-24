@@ -42,6 +42,7 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div>
     <form wire:submit="register">
+        <x-nexus.form-progress class="mb-4" />
         <!-- Name -->
         <div>
             <x-input-label for="name" :value="__('Name')" />
@@ -64,7 +65,7 @@ new #[Layout('layouts.guest')] class extends Component
                             type="password"
                             name="password"
                             required autocomplete="new-password" />
-            <x-auth.password-hint />
+            <x-auth.password-meter input="password" />
 
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>

@@ -42,13 +42,20 @@ new class extends Component
     <x-modal name="confirm-user-deletion" :show="$errors->isNotEmpty()" focusable>
         <form wire:submit="deleteUser" class="p-6">
 
-            <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {{ __('Tem a certeza que deseja eliminar a conta?') }}
-            </h2>
+            <div class="flex items-start gap-4">
+                <span class="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+                    <x-nexus.glyph name="trash" class="h-8 w-8" />
+                </span>
+                <div class="min-w-0">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                        {{ __('Tem a certeza que deseja eliminar a conta?') }}
+                    </h2>
 
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                {{ __('Todos os dados serão removidos de forma permanente. Introduza a palavra-passe para confirmar.') }}
-            </p>
+                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                        {{ __('Todos os dados serão removidos de forma permanente. Introduza a palavra-passe para confirmar.') }}
+                    </p>
+                </div>
+            </div>
 
             <div class="mt-6">
                 <x-input-label for="password" value="{{ __('Palavra-passe') }}" class="sr-only" />

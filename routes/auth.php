@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginCaptchaController;
+use App\Http\Controllers\Auth\PasswordStrengthCheckController;
+use App\Http\Controllers\Auth\StopImpersonationController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Route;
@@ -22,13 +24,20 @@ Route::middleware('guest')->group(function () {
 
     Volt::route('forgot-password', 'pages.auth.forgot-password')
         ->name('password.request');
-
-    Volt::route('reset-password/{token}', 'pages.auth.reset-password')
-        ->name('password.reset');
 });
+
+Volt::route('reset-password/{token}', 'pages.auth.reset-password')
+    ->name('password.reset');
+
+Route::post('password-check', PasswordStrengthCheckController::class)
+    ->middleware('throttle:20,1')
+    ->name('password.check');
 
 Route::middleware('auth')->group(function () {
     Route::post('logout', Logout::class)->name('logout');
+
+    Route::post('impersonation/stop', StopImpersonationController::class)
+        ->name('impersonation.stop');
 
     Volt::route('verify-email', 'pages.auth.verify-email')
         ->name('verification.notice');

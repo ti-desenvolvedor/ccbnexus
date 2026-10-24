@@ -8,6 +8,7 @@ use App\Models\Regional;
 use App\Models\User;
 use App\Services\BaptismListReportBuilder;
 use App\Services\BaptismListReportConfirmation;
+use App\Services\BaptismListSectionVisibility;
 use App\Services\OrganizationalContextService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -233,26 +234,32 @@ class BaptismListReportPage extends Component
         $item->update(['is_visible' => ! $item->is_visible]);
     }
 
-    public function hideSection(string $sectionKey): void
+    public function hideSection(string $sectionKey, BaptismListSectionVisibility $visibility): void
     {
-        $report = $this->currentReport();
-        if (! $report) {
-            return;
+        $report = $this->maintainableReport();
+        if ($report) {
+            $visibility->hide($report, [$sectionKey]);
         }
-        abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
-        $this->authorizeReport($report);
-        $report->items()->where('section_key', $sectionKey)->update(['is_visible' => false]);
     }
 
-    public function showSection(string $sectionKey): void
+    public function showSection(string $sectionKey, BaptismListSectionVisibility $visibility): void
+    {
+        $report = $this->maintainableReport();
+        if ($report) {
+            $visibility->show($report, [$sectionKey]);
+        }
+    }
+
+    protected function maintainableReport(): ?BaptismListReport
     {
         $report = $this->currentReport();
         if (! $report) {
-            return;
+            return null;
         }
         abort_unless(auth()->user()?->canMaintainSecretaria(), 403);
         $this->authorizeReport($report);
-        $report->items()->where('section_key', $sectionKey)->update(['is_visible' => true]);
+
+        return $report;
     }
 
     public function hideBras(): void
@@ -351,7 +358,7 @@ class BaptismListReportPage extends Component
             'rejectorName' => $rejectorName,
             'rejectedAtLabel' => $rejectedAtLabel,
             'confirmationBlocked' => $visiblePending->isNotEmpty(),
-            'displayBlocks' => $report ? $this->buildDisplayBlocks($grouped) : [],
+            'displayBlocks' => $report ? $this->buildDisplayBlocks($grouped, $report) : [],
             'periodHint' => $periodHint,
             'regional' => $context->activeRegionalId()
                 ? Regional::query()->find($context->activeRegionalId())
@@ -368,12 +375,15 @@ class BaptismListReportPage extends Component
      * Agrupa organistas/obra/RA/RRM/RGA num único bloco com um filtro.
      *
      * @param  array<string, Collection<int, BaptismListReportItem>>  $grouped
-     * @return list<array{type: string, key: string, items: Collection<int, BaptismListReportItem>}>
+     * @return list<array{type: string, key: string, items: Collection<int, BaptismListReportItem>, hidden: bool}>
      */
-    protected function buildDisplayBlocks(array $grouped): array
+    protected function buildDisplayBlocks(array $grouped, BaptismListReport $report): array
     {
         $blocks = [];
         $narrativeAdded = false;
+        $hiddenSections = BaptismListSectionVisibility::hiddenSections($report);
+        $isHidden = static fn (Collection $items, array $keys): bool => $items->where('is_visible', true)->isEmpty()
+            && ($items->isNotEmpty() || array_diff($keys, $hiddenSections) === []);
 
         foreach (array_keys(BaptismListReportBuilder::SECTION_ORDER) as $key) {
             if (in_array($key, BaptismListReportBuilder::regionalBlockSectionKeys(), true)) {
@@ -391,16 +401,19 @@ class BaptismListReportPage extends Component
                     'type' => 'regional_meetings',
                     'key' => BaptismListReportBuilder::REGIONAL_MEETINGS_PERIOD_KEY,
                     'items' => $items->values(),
+                    'hidden' => $isHidden($items, BaptismListReportBuilder::regionalBlockSectionKeys()),
                 ];
 
                 continue;
             }
 
             if (isset($grouped[$key]) || isset($this->sectionFilters[$key])) {
+                $items = $grouped[$key] ?? collect();
                 $blocks[] = [
                     'type' => 'section',
                     'key' => $key,
-                    'items' => $grouped[$key] ?? collect(),
+                    'items' => $items,
+                    'hidden' => $isHidden($items, [$key]),
                 ];
             }
         }
@@ -408,28 +421,20 @@ class BaptismListReportPage extends Component
         return $blocks;
     }
 
-    public function hideRegionalMeetings(): void
+    public function hideRegionalMeetings(BaptismListSectionVisibility $visibility): void
     {
-        $report = $this->currentReport();
-        if (! $report) {
-            return;
+        $report = $this->maintainableReport();
+        if ($report) {
+            $visibility->hide($report, BaptismListReportBuilder::regionalBlockSectionKeys());
         }
-        $this->authorizeReport($report);
-        $report->items()
-            ->whereIn('section_key', BaptismListReportBuilder::regionalBlockSectionKeys())
-            ->update(['is_visible' => false]);
     }
 
-    public function showRegionalMeetings(): void
+    public function showRegionalMeetings(BaptismListSectionVisibility $visibility): void
     {
-        $report = $this->currentReport();
-        if (! $report) {
-            return;
+        $report = $this->maintainableReport();
+        if ($report) {
+            $visibility->show($report, BaptismListReportBuilder::regionalBlockSectionKeys());
         }
-        $this->authorizeReport($report);
-        $report->items()
-            ->whereIn('section_key', BaptismListReportBuilder::regionalBlockSectionKeys())
-            ->update(['is_visible' => true]);
     }
 
     protected function resetSectionFiltersToDefaults(): void

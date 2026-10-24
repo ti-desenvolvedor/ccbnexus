@@ -23,7 +23,9 @@ new class extends Component
                 'password' => ['required', 'string', Password::defaults(), 'confirmed'],
             ]);
         } catch (ValidationException $e) {
-            $this->reset('current_password', 'password', 'password_confirmation');
+            if ($e->validator->errors()->has('current_password')) {
+                $this->reset('current_password');
+            }
 
             throw $e;
         }
@@ -39,7 +41,7 @@ new class extends Component
 <section>
     <x-profile.section
         :title="__('Palavra-passe')"
-        :description="__('Mínimo de 8 caracteres, com letra, número e caractere especial.')"
+        :description="__('A barra mostra se a senha nova é fraca, média ou forte. Fraca e vazada não são guardadas.')"
     >
         <x-slot name="icon">
             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
@@ -48,6 +50,7 @@ new class extends Component
         </x-slot>
 
     <form wire:submit="updatePassword" class="space-y-6">
+        <x-nexus.form-progress class="mb-2" />
         <div>
             <x-input-label for="update_password_current_password" :value="__('Current Password')" />
             <x-text-input wire:model="current_password" id="update_password_current_password" name="current_password" type="password" class="mt-1 block w-full" autocomplete="current-password" />
@@ -57,7 +60,7 @@ new class extends Component
         <div>
             <x-input-label for="update_password_password" :value="__('New Password')" />
             <x-text-input wire:model="password" id="update_password_password" name="password" type="password" class="mt-1 block w-full" autocomplete="new-password" />
-            <x-auth.password-hint />
+            <x-auth.password-meter input="update_password_password" />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 

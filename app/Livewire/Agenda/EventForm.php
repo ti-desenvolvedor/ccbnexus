@@ -764,12 +764,12 @@ class EventForm extends Component
     private function tabFieldMap(): array
     {
         return [
-            'main' => ['title', 'regional_id', 'event_type_id', 'starts_at', 'ends_at', 'location_id', 'attendance_mode', 'dress_code', 'whatsapp_enabled', 'include_on_baptism_list', 'ministry_servant_id', 'description', 'whatsapp_notice_template_id', 'servant_name', 'servant_position_id', 'servant_phone'],
-            'local' => ['meeting_room_id'],
+            'main' => ['title', 'regional_id', 'event_type_id', 'starts_at', 'ends_at', 'attendance_mode', 'dress_code'],
+            'local' => ['location_id', 'meeting_room_id'],
             'audience' => ['public_position_ids'],
             'recurrence' => ['recurrence_frequency', 'recurrence_interval_weeks', 'recurrence_interval_years', 'recurrence_until', 'recurrence_monthly_nth', 'recurrence_monthly_weekday', 'recurrence_months_filter', 'recurrence_months_list'],
             'structure' => ['expected_attendees', 'other_materials_note', 'has_libras'],
-            'people' => ['whatsapp_group_ids', 'audience_preset'],
+            'people' => ['whatsapp_group_ids', 'audience_preset', 'whatsapp_enabled', 'include_on_baptism_list', 'ministry_servant_id', 'description', 'whatsapp_notice_template_id', 'servant_name', 'servant_position_id', 'servant_phone'],
         ];
     }
 

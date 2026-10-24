@@ -42,9 +42,9 @@ new #[Layout('layouts.guest')] class extends Component
     </div>
 
     @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600">
+        <x-nexus.alert tone="success" class="mb-4">
             {{ __('A new verification link has been sent to the email address you provided during registration.') }}
-        </div>
+        </x-nexus.alert>
     @endif
 
     <div class="mt-4 flex items-center justify-between">

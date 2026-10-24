@@ -65,12 +65,18 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::flash('status', __($status));
 
-        $this->redirectRoute('login', navigate: true);
+        $this->redirectRoute(auth()->check() ? 'dashboard' : 'login', navigate: true);
     }
 }; ?>
 
 <div>
+    <h1 class="text-lg font-semibold text-gray-900">Nova senha</h1>
+    <p class="mb-4 mt-1 text-sm text-gray-700">Escolha uma senha nova para esta conta. O link deste e-mail só vale para este endereço.</p>
+    @auth
+        <p class="mb-4 text-sm text-gray-700">Você já está no painel. Esta página define a senha da conta do link, sem pedir para sair.</p>
+    @endauth
     <form wire:submit="resetPassword">
+        <x-nexus.form-progress class="mb-4" />
         <!-- Email Address -->
         <div>
             <x-input-label for="email" :value="__('Email')" />
@@ -82,7 +88,7 @@ new #[Layout('layouts.guest')] class extends Component
         <div class="mt-4">
             <x-input-label for="password" :value="__('Password')" />
             <x-text-input wire:model="password" id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
-            <x-auth.password-hint />
+            <x-auth.password-meter input="password" />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
@@ -97,7 +103,10 @@ new #[Layout('layouts.guest')] class extends Component
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
-        <div class="flex items-center justify-end mt-4">
+        <div class="mt-4 flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <a href="{{ auth()->check() ? route('dashboard') : route('login') }}" wire:navigate class="inline-flex min-h-11 items-center text-sm font-semibold text-gray-800 underline decoration-gray-400 underline-offset-4 focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-primary-500">
+                {{ auth()->check() ? 'Voltar ao painel' : 'Voltar ao login' }}
+            </a>
             <x-primary-button>
                 {{ __('Reset Password') }}
             </x-primary-button>

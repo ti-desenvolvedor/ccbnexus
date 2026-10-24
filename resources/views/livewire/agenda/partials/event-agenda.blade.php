@@ -9,7 +9,7 @@
     <div class="space-y-6">
         @foreach ($agendaDays as $day)
             <section>
-                <h2 class="sticky top-0 z-10 bg-white/95 py-2 text-sm font-semibold capitalize text-slate-900 dark:bg-slate-950/95 dark:text-slate-100">{{ $day['heading'] }}</h2>
+                <h2 class="sticky top-0 z-10 bg-white/95 py-2 text-sm font-semibold text-slate-900 first-letter:uppercase max-md:top-16 dark:bg-slate-950/95 dark:text-slate-100">{{ $day['heading'] }}</h2>
                 @if (! empty($holidaysByDate[$day['date']] ?? []))
                     <p class="text-xs font-semibold text-amber-800 dark:text-amber-200">{{ implode(' · ', $holidaysByDate[$day['date']]) }}</p>
                 @endif

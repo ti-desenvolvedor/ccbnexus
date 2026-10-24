@@ -27,16 +27,18 @@
         @if (! $editing_id && ! $creating)
             <p class="text-sm text-slate-600 dark:text-slate-300">Escolha um tipo à esquerda ou clique em Novo tipo. O nome aparece na agenda. O texto do modelo entra na lista de batismos.</p>
         @else
-            <form wire:submit="save" class="space-y-4">
+            <form wire:submit="save" data-progress="marked" class="space-y-4">
+                <x-nexus.form-progress />
                 <div>
                     <label class="text-xs font-semibold text-slate-500" for="event-type-name">Nome do tipo</label>
-                    <input id="event-type-name" type="text" wire:model="name" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" placeholder="Ex.: Reunião de mocidade" />
-                    @error('name') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                    <input id="event-type-name" type="text" wire:model="name" data-progress-field class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" placeholder="Ex.: Reunião de mocidade" />
+                    @error('name') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                 </div>
                 <div>
                     <label class="text-xs font-semibold text-slate-500">Como a lista mostra este tipo</label>
                     <x-nexus.searchable-select
                         wire:model="report_layout"
+                        data-progress-field
                         class="mt-1"
                         search-placeholder="Buscar modelo..."
                         :options="collect($layouts)->map(fn ($label, $value) => ['value' => (string) $value, 'label' => (string) $label])"
@@ -48,7 +50,7 @@
                     <div class="mt-2">
                         <x-ui.simple-editor model="paragraph" :value="$paragraph" :fields="$fields" live placeholder="Escreva o texto do modelo…" body-class="min-h-56" />
                     </div>
-                    @error('paragraph') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                    @error('paragraph') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                 </div>
                 @if ($preview !== '')
                     <div>
@@ -57,7 +59,7 @@
                     </div>
                 @endif
                 @if (session('status'))
-                    <p class="text-sm text-emerald-700">{{ session('status') }}</p>
+                    <x-nexus.alert tone="success">{{ session('status') }}</x-nexus.alert>
                 @endif
                 <x-ui.button type="submit">{{ $creating ? 'Criar tipo' : 'Guardar tipo' }}</x-ui.button>
             </form>

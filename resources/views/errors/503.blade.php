@@ -8,6 +8,7 @@
         <meta http-equiv="refresh" content="{{ (int) $retryAfter }}">
     @endif
     <title>{{ config('app.name', 'CCB Nexus') }} — Manutenção</title>
+    <x-favicon />
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
     <style>

@@ -6,6 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title>{{ config('app.name') }}</title>
+        <x-favicon />
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -42,7 +43,8 @@
 
             <!-- Sidebar -->
             <aside
-                class="nexus-sidebar fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800/80 dark:bg-slate-950/70 lg:translate-x-0"
+                @keydown.escape.window="$store.nexus.sidebarOpen && $store.nexus.closeSidebar()"
+                class="nexus-sidebar fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800/80 dark:bg-slate-950/70 lg:translate-x-0"
                 :class="{
                     '-translate-x-full': !$store.nexus.sidebarOpen,
                     'translate-x-0': $store.nexus.sidebarOpen,
@@ -61,6 +63,14 @@
                             <span class="truncate text-xs font-medium text-[rgb(var(--sidebar-muted)_/_1)]">{{ __('Painel') }}</span>
                         </x-slot>
                     </x-brand-logo>
+                    <button
+                        type="button"
+                        class="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg hover:bg-[rgb(var(--sidebar-muted)/0.14)] lg:hidden"
+                        @click="$store.nexus.closeSidebar()"
+                        aria-label="{{ __('Fechar menu') }}"
+                    >
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
                 </div>
 
                 <nav class="nexus-scroll flex-1 space-y-6 overflow-y-auto px-3 pb-6 pt-2">
@@ -415,10 +425,11 @@
             <div class="nexus-main min-h-screen min-w-0 transition-[padding] duration-200 lg:pl-72" :class="{ 'is-rail-layout': $store.nexus.sidebarDensity === 'icons' }">
                 <!-- Topbar -->
                 <header
-                    class="sticky top-0 z-30 border-b backdrop-blur"
+                    class="max-md:contents md:sticky md:top-0 md:z-30 md:border-b md:backdrop-blur"
                     style="background-color: rgb(var(--topbar-bg) / 0.80); border-color: rgb(var(--topbar-border) / 0.80); color: rgb(var(--topbar-text) / 1);"
                 >
-                    <div class="mx-auto flex h-16 w-full max-w-full items-center gap-3 px-4 sm:px-6 lg:px-8">
+                    <x-nexus.impersonation-banner />
+                    <div class="mx-auto flex h-16 w-full max-w-full items-center gap-1 px-2 max-md:sticky max-md:top-0 max-md:z-30 max-md:border-b max-md:border-[rgb(var(--topbar-border)/0.8)] max-md:bg-[rgb(var(--topbar-bg)/0.94)] max-md:text-[rgb(var(--topbar-text)/1)] max-md:backdrop-blur sm:gap-3 sm:px-6 lg:px-8">
                         <button
                             type="button"
                             class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[rgb(var(--topbar-text)/1)] hover:bg-[rgb(var(--topbar-muted)/0.14)] lg:hidden"
@@ -453,7 +464,7 @@
                             </button>
                         </div>
 
-                        <div class="ml-auto flex items-center gap-2">
+                        <div class="ml-auto flex items-center gap-1 sm:gap-2">
                             <div class="relative" x-data="{ open: false }">
                                 <button
                                     type="button"
@@ -524,7 +535,7 @@
 
                             <button
                                 type="button"
-                                class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[rgb(var(--topbar-text)/1)] hover:bg-[rgb(var(--topbar-muted)/0.14)]"
+                                class="hidden min-h-11 min-w-11 items-center justify-center rounded-lg text-[rgb(var(--topbar-text)/1)] hover:bg-[rgb(var(--topbar-muted)/0.14)] sm:inline-flex"
                                 @click="$store.nexus.toggleTheme()"
                                 :aria-label="$store.nexus.theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'"
                             >
@@ -616,10 +627,8 @@
                 </header>
 
                 <main class="mx-auto w-full max-w-full px-4 py-8 sm:px-6 lg:px-8">
-                    @if (session('status'))
-                        <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100" role="status">
-                            {{ session('status') }}
-                        </div>
+                    @if (session('status') && session('status') !== 'verification-link-sent')
+                        <x-nexus.alert tone="success" class="mb-6">{{ session('status') }}</x-nexus.alert>
                     @endif
                     {{ $slot }}
                 </main>
@@ -634,6 +643,8 @@
         @auth
             <x-nexus.command-palette />
         @endauth
+
+        <x-nexus.dialog />
 
         <style>
             [x-cloak] { display: none !important; }

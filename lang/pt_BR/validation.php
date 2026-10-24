@@ -107,10 +107,10 @@ return [
     'numeric' => 'O campo :attribute deve conter um valor numérico.',
     'password' => [
         'letters' => 'O :attribute deve conter pelo menos uma letra.',
-        'mixed' => 'O :attribute deve conter pelo menos uma letra maiúscula e uma minúscula.',
+        'mixed' => 'A senha deve conter pelo menos uma letra maiúscula e uma minúscula.',
         'numbers' => 'O :attribute deve conter pelo menos um número.',
         'symbols' => 'O :attribute deve conter pelo menos um símbolo.',
-        'uncompromised' => 'O dado :attribute apareceu em um vazamento de dados. Por favor, escolha um :attribute diferente.',
+        'uncompromised' => 'Esta senha apareceu em um vazamento de dados. Escolha outra.',
     ],
     'present' => 'O campo :attribute deve estar presente.',
     'present_if' => 'O campo :attribute deve estar presente quando :other for :value.',

@@ -32,7 +32,7 @@
                     <input type="radio" wire:model.live="participation" value="maybe" class="text-primary-600" />
                     Ainda não sei
                 </label>
-                @error('participation') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                @error('participation') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
             </div>
 
             @if ($event->attendance_mode === 'hybrid' && $participation === 'yes')
@@ -46,7 +46,7 @@
                         <input type="radio" wire:model="presence_mode" value="online" class="text-primary-600" />
                         Online (remoto)
                     </label>
-                    @error('presence_mode') <p class="text-xs text-rose-600">{{ $message }}</p> @enderror
+                    @error('presence_mode') <x-nexus.inline-message>{{ $message }}</x-nexus.inline-message> @enderror
                 </div>
             @endif
 

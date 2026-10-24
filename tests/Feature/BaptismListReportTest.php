@@ -929,6 +929,48 @@ class BaptismListReportTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_hidden_section_stays_hidden_on_resync_and_new_revision(): void
+    {
+        [$regional, $user, $report] = $this->draftBulletin();
+        $item = $report->items->firstWhere('section_key', 'batismos');
+        session(['nexus.active_regional_id' => $regional->id]);
+
+        Livewire::actingAs($user)
+            ->test(BaptismListReportPage::class)
+            ->assertSeeHtml('toggleItem('.$item->id.')')
+            ->call('hideSection', 'batismos')
+            ->assertSee('Secção oculta')
+            ->assertSee('Mostrar secção')
+            ->assertDontSeeHtml('toggleItem('.$item->id.')');
+
+        Event::query()->create([
+            'regional_id' => $regional->id,
+            'title' => 'Batismo novo',
+            'event_type_id' => EventType::query()->where('slug', 'batismo')->value('id'),
+            'starts_at' => Carbon::parse('2026-11-05 18:30:00'),
+            'ends_at' => Carbon::parse('2026-11-05 20:30:00'),
+            'status' => 'published',
+            'include_on_baptism_list' => true,
+            'created_by' => $user->id,
+        ]);
+
+        $builder = app(BaptismListReportBuilder::class);
+        $synced = $builder->generateOrSync($regional->id, Carbon::parse('2026-10-15'), $user);
+        $batismos = $synced->items->where('section_key', 'batismos');
+        $this->assertCount(2, $batismos);
+        $this->assertTrue($batismos->every(fn ($i) => ! $i->is_visible));
+
+        $revision = $builder->generateOrSync($regional->id, Carbon::parse('2026-10-15'), $user, true);
+        $this->assertSame(1, $revision->revision);
+        $this->assertTrue($revision->items->where('section_key', 'batismos')->every(fn ($i) => ! $i->is_visible));
+
+        Livewire::actingAs($user)
+            ->test(BaptismListReportPage::class)
+            ->call('showSection', 'batismos');
+        $this->assertTrue($revision->fresh('items')->items->where('section_key', 'batismos')->every(fn ($i) => $i->is_visible));
+        $this->assertSame([], $revision->fresh()->meta['hidden_sections']);
+    }
+
     /**
      * @return array{0: Regional, 1: User, 2: BaptismListReport}
      */
