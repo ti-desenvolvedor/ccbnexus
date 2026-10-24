@@ -50,6 +50,7 @@ No topo de cada formulário com **dois ou mais** campos obrigatórios para guard
 - Gaveta do menu: no máximo 85% da largura, botão Fechar no topo, Esc e toque fora fecham, a página por trás não rola. Navegar fecha a gaveta.
 - O botão rápido de tema sai do topo abaixo de `sm`; o tema continua em Aparência.
 - Agenda no telemóvel abre na vista Agenda (dia a dia) quando a URL não fixa outra vista. Mensal continua disponível.
+- Agenda: **Ocorrências** e **Séries**, e o filtro **Tipo**, ficam sempre visíveis em Calendário, Lista, Mensal e Agenda. Séries lista as séries da regional em qualquer vista; Ocorrências volta à vista escolhida. Situação e Canal continuam em Filtros no telemóvel.
 - Listas com vários filtros: busca sempre visível; os outros filtros ficam atrás de “Filtros (N)” abaixo de `sm`.
 - Abas de formulário longo (evento): grelha de 3 colunas no telemóvel, nunca faixa com scroll lateral.
 - Cabeçalhos fixos dentro do conteúdo usam `max-md:top-16` para não ficarem sob a barra.

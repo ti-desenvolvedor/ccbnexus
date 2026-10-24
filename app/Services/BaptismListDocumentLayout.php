@@ -41,6 +41,30 @@ final class BaptismListDocumentLayout
 
     public const COLUMN_GAP_CM = 0.35;
 
+    /**
+     * Fração da coluna do boletim por célula. A célula "lib" fica colada à direita do local, sem borda entre as duas.
+     *
+     * @var array<string, float>
+     */
+    public const LIST_COLUMNS = [
+        'date' => 0.135,
+        'day' => 0.13,
+        'time' => 0.15,
+        'loc' => 0.32,
+        'lib' => 0.045,
+        'att' => 0.22,
+    ];
+
+    /** @var array<string, float> */
+    public const WIDE_COLUMNS = [
+        'date' => 0.135,
+        'day' => 0.13,
+        'time' => 0.15,
+        'loc-wide' => 0.585,
+    ];
+
+    public const LIBRAS_ICON_PT = 10.0;
+
     public static function marginCss(): string
     {
         return sprintf(

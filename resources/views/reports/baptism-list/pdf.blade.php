@@ -1,20 +1,14 @@
 @php
-    // Arial Narrow fica em cache dentro do chroot do DomPDF. Sem ele, o boletim usa DejaVu.
-    $fontCache = storage_path('fonts');
-    if (! is_dir($fontCache)) {
-        @mkdir($fontCache, 0755, true);
-    }
-    $narrowRegular = $fontCache.DIRECTORY_SEPARATOR.'arialn.ttf';
-    $narrowBold = $fontCache.DIRECTORY_SEPARATOR.'arialnb.ttf';
-    if (! is_file($narrowRegular) && is_file('C:/Windows/Fonts/arialn.ttf')) {
-        @copy('C:/Windows/Fonts/arialn.ttf', $narrowRegular);
-    }
-    if (! is_file($narrowBold) && is_file('C:/Windows/Fonts/arialnb.ttf')) {
-        @copy('C:/Windows/Fonts/arialnb.ttf', $narrowBold);
-    }
-    $useNarrow = is_file($narrowRegular) && is_file($narrowBold);
-    $narrowRegularUrl = str_replace('\\', '/', $narrowRegular);
-    $narrowBoldUrl = str_replace('\\', '/', $narrowBold);
+    // Liberation Sans Narrow tem as mesmas métricas do Arial Narrow do Word, por isso as linhas quebram igual.
+    // Vai no repositório porque o servidor não tem Arial Narrow; sem ela o DomPDF cai para DejaVu (mais larga).
+    $narrowDir = resource_path('fonts/liberation-sans-narrow');
+    $narrowFaces = [
+        ['normal', 'normal', 'LiberationSansNarrow-Regular.ttf'],
+        ['normal', 'bold', 'LiberationSansNarrow-Bold.ttf'],
+        ['italic', 'normal', 'LiberationSansNarrow-Italic.ttf'],
+        ['italic', 'bold', 'LiberationSansNarrow-BoldItalic.ttf'],
+    ];
+    $useNarrow = is_file($narrowDir.'/'.$narrowFaces[0][2]) && is_file($narrowDir.'/'.$narrowFaces[1][2]);
 
     // Mesmas medidas do Word (BaptismListDocumentLayout).
     $layout = \App\Services\BaptismListDocumentLayout::class;
@@ -28,12 +22,13 @@
     $marginSideMm = $layout::MARGIN_SIDE_CM * 10;
     $marginBottomMm = $layout::MARGIN_BOTTOM_CM * 10;
     $columnGapMm = $layout::COLUMN_GAP_CM * 10;
-    $colDate = 16;
-    $colDay = 13;
-    $colTime = 17;
-    $colLoc = 32;
-    $colAtt = 22;
-    $colLocWide = 100 - $colDate - $colDay - $colTime;
+    $colDate = $layout::LIST_COLUMNS['date'] * 100;
+    $colDay = $layout::LIST_COLUMNS['day'] * 100;
+    $colTime = $layout::LIST_COLUMNS['time'] * 100;
+    $colLoc = $layout::LIST_COLUMNS['loc'] * 100;
+    $colLib = $layout::LIST_COLUMNS['lib'] * 100;
+    $colAtt = $layout::LIST_COLUMNS['att'] * 100;
+    $colLocWide = $layout::WIDE_COLUMNS['loc-wide'] * 100;
     $mmToPt = 72 / 25.4;
     $pageWidthPt = 595.28;
     $pageHeightPt = 841.89 - (($marginTopMm + $marginBottomMm) * $mmToPt);
@@ -50,18 +45,15 @@
     <meta charset="utf-8">
     <style>
         @if ($useNarrow)
+        @foreach ($narrowFaces as [$fontStyle, $fontWeight, $fontFile])
+            @continue(! is_file($narrowDir.'/'.$fontFile))
         @font-face {
             font-family: "Arial Narrow";
-            font-style: normal;
-            font-weight: normal;
-            src: url("{{ $narrowRegularUrl }}") format("truetype");
+            font-style: {{ $fontStyle }};
+            font-weight: {{ $fontWeight }};
+            src: url("{{ str_replace('\\', '/', $narrowDir.'/'.$fontFile) }}") format("truetype");
         }
-        @font-face {
-            font-family: "Arial Narrow";
-            font-style: normal;
-            font-weight: bold;
-            src: url("{{ $narrowBoldUrl }}") format("truetype");
-        }
+        @endforeach
         @endif
 
         @page {
@@ -164,6 +156,10 @@
         table.list .day { width: {{ $colDay }}%; text-align: center; white-space: nowrap; }
         table.list .time { width: {{ $colTime }}%; text-align: center; white-space: nowrap; }
         table.list .loc { width: {{ $colLoc }}%; }
+        table.list td.loc { border-right: none; }
+        table.list .lib { width: {{ $colLib }}%; text-align: right; vertical-align: middle; padding: 0; }
+        table.list td.lib { border-left: none; }
+        table.list .lib img { display: inline-block; }
         table.list .att { width: {{ $colAtt }}%; text-align: center; }
         table.list .loc-wide { width: {{ $colLocWide }}%; }
         table.list tr.alt td { background: #D9D9D9; }
@@ -233,7 +229,7 @@
     $nextCap = $columnHeightNext - 6;
     $atomCap = min($firstCap, $nextCap);
 
-    $rowLines = static function (string $html) use ($columnInnerPt, $charPt, $colDate, $colDay, $colTime, $colLoc, $colAtt, $colLocWide): int {
+    $rowLines = static function (string $html) use ($columnInnerPt, $charPt, $colDate, $colDay, $colTime, $colLoc, $colLib, $colAtt, $colLocWide): int {
         if (! preg_match_all('/<td\b([^>]*)>(.*?)<\/td>/is', $html, $cells, PREG_SET_ORDER)) {
             return 1;
         }
@@ -243,6 +239,7 @@
             'day' => $colDay / 100,
             'time' => $colTime / 100,
             'loc' => $colLoc / 100,
+            'lib' => $colLib / 100,
             'att' => $colAtt / 100,
         ];
         $max = 1;

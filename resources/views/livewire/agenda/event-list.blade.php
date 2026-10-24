@@ -34,7 +34,7 @@
             @endforeach
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-            @if (in_array($view, ['month', 'agenda'], true))
+            @if (in_array($view, ['month', 'agenda'], true) && $listMode !== 'series')
                 @if ($pdfUrl)
                     <x-ui.button variant="secondary" :href="$pdfUrl" target="_blank" rel="noopener" class="min-h-11 w-full sm:w-auto" title="Agenda de janeiro a dezembro de {{ $pdfYear }}">Gerar PDF</x-ui.button>
                 @else
@@ -54,13 +54,6 @@
         </div>
     </div>
 
-    @if ($view === 'list')
-        <div class="flex gap-2" role="group" aria-label="Modo da lista">
-            <button type="button" wire:click="setListMode('occurrences')" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:flex-none {{ $listMode === 'occurrences' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950' }}">Ocorrências</button>
-            <button type="button" wire:click="setListMode('series')" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:flex-none {{ $listMode === 'series' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950' }}">Séries</button>
-        </div>
-    @endif
-
     @if ($showPeriod)
         <div class="space-y-2">
             <p class="text-center text-base font-semibold text-slate-900 first-letter:uppercase dark:text-slate-100">{{ $periodLabel }}</p>
@@ -77,8 +70,26 @@
             <label for="event-search" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Buscar eventos</label>
             <input id="event-search" type="search" wire:model.live.debounce.300ms="search" class="mt-1 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base dark:border-slate-800 dark:bg-slate-950" />
         </div>
+        <div>
+            <span id="event-list-mode-label" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Mostrar</span>
+            <div class="mt-1 flex gap-2" role="group" aria-labelledby="event-list-mode-label">
+                <button type="button" wire:click="setListMode('occurrences')" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:flex-none {{ $listMode === 'occurrences' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950' }}">Ocorrências</button>
+                <button type="button" wire:click="setListMode('series')" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:flex-none {{ $listMode === 'series' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950' }}">Séries</button>
+            </div>
+        </div>
+        <div class="w-full sm:w-64">
+            <label class="text-xs font-semibold text-slate-700 dark:text-slate-200">Tipo</label>
+            <div class="mt-1">
+                <x-nexus.searchable-select
+                    wire:model.live="typeFilter"
+                    :options="collect([['value' => '0', 'label' => 'Todos']])->merge($eventTypes->map(fn ($t) => ['value' => (string) $t->id, 'label' => $t->name]))"
+                    placeholder="Todos"
+                    searchPlaceholder="Buscar tipo..."
+                />
+            </div>
+        </div>
         @php
-            $activeFilters = collect([$typeFilter !== '' && $typeFilter !== '0', $statusFilter !== '', $channelFilter !== ''])->filter()->count();
+            $activeFilters = collect([$statusFilter !== '', $channelFilter !== ''])->filter()->count();
         @endphp
         <div x-data="{ open: @js($activeFilters > 0) }" class="contents">
         <button
@@ -92,17 +103,6 @@
             <svg class="h-4 w-4 transition" :class="{ 'rotate-180': open }" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-width="2" stroke-linecap="round" d="M6 9l6 6 6-6" /></svg>
         </button>
         <div id="event-more-filters" @class(['flex flex-col gap-3 sm:contents', 'max-sm:hidden' => $activeFilters === 0]) :class="{ 'max-sm:hidden': !open }">
-        <div class="w-full sm:w-64">
-            <label class="text-xs font-semibold text-slate-700 dark:text-slate-200">Tipo</label>
-            <div class="mt-1">
-                <x-nexus.searchable-select
-                    wire:model.live="typeFilter"
-                    :options="collect([['value' => '0', 'label' => 'Todos']])->merge($eventTypes->map(fn ($t) => ['value' => (string) $t->id, 'label' => $t->name]))"
-                    placeholder="Todos"
-                    searchPlaceholder="Buscar tipo..."
-                />
-            </div>
-        </div>
         <div>
             <label for="event-status-filter" class="text-xs font-semibold text-slate-700 dark:text-slate-200">Situação</label>
             <x-nexus.searchable-select
@@ -165,14 +165,14 @@
     @endif
 
     <div wire:loading.class="opacity-50" class="space-y-4">
-        @if ($view === 'week')
+        @if ($listMode === 'series')
+            @include('livewire.agenda.partials.event-series')
+        @elseif ($view === 'week')
             @include('livewire.agenda.partials.event-week')
         @elseif ($view === 'month')
             @include('livewire.agenda.partials.event-month')
         @elseif ($view === 'agenda')
             @include('livewire.agenda.partials.event-agenda')
-        @elseif ($listMode === 'series')
-            @include('livewire.agenda.partials.event-series')
         @else
             @include('livewire.agenda.partials.event-occurrences')
         @endif

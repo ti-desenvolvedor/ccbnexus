@@ -605,6 +605,8 @@ class BaptismListReportTest extends TestCase
         ])->setPaper('a4')->output();
 
         $this->assertStringStartsWith('%PDF', $pdf);
+        $this->assertStringContainsString('/BaseFont /LiberationSansNarrow', $pdf);
+        $this->assertStringNotContainsString('DejaVu', $pdf);
 
         Carbon::setTestNow();
     }
@@ -667,6 +669,7 @@ class BaptismListReportTest extends TestCase
         $this->assertStringContainsString('alt="Libras"', $html);
         $this->assertStringContainsString('data:image/png;base64,', $html);
         $this->assertStringNotContainsString('<em>(Libras)</em>', $html);
+        $this->assertStringContainsString('<td class="lib"><img', $html);
 
         $pdf = $this->actingAs($user)->get(route('secretaria.baptism-list.pdf', $report));
         $pdf->assertOk();
@@ -710,6 +713,7 @@ class BaptismListReportTest extends TestCase
         $this->assertSame(1, substr_count($xml, '<w:sectPr'));
         $this->assertStringContainsString('w:num="2"', $xml);
         $this->assertTrue($media);
+        $this->assertMatchesRegularExpression('#<w:left w:val="nil"[^>]*/>.*?</w:tcPr><w:p><w:pPr><w:jc w:val="right"/>.*?<w:pict>#s', $xml);
 
         $outsider = User::factory()->create(['regional_id' => $other->id]);
         $outsider->givePermissionTo('visualizar_relatorios');
@@ -927,6 +931,25 @@ class BaptismListReportTest extends TestCase
         $this->assertSame(2, $report->checks()->count());
 
         Carbon::setTestNow();
+    }
+
+    public function test_pdf_falls_back_to_html_when_word_conversion_is_unavailable(): void
+    {
+        [, $user, $report] = $this->draftBulletin();
+        $renderer = app(\App\Services\BaptismListPdfRenderer::class);
+        $sections = \App\Services\BaptismListDocumentBlocks::orderedSections($report);
+
+        config(['nexus.baptism_pdf.soffice' => null]);
+        $this->assertNull($renderer->fromWord($report, $sections));
+
+        config(['nexus.baptism_pdf.soffice' => PHP_BINARY, 'nexus.baptism_pdf.timeout' => 20]);
+        $this->assertNull($renderer->fromWord($report, $sections));
+
+        $response = $this->actingAs($user)->get(route('secretaria.baptism-list.pdf', $report));
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+        $this->assertSame([], glob(storage_path('app/tmp/baptism-pdf-*')) ?: []);
     }
 
     public function test_hidden_section_stays_hidden_on_resync_and_new_revision(): void

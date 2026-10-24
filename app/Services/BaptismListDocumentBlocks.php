@@ -71,7 +71,7 @@ class BaptismListDocumentBlocks
     }
 
     /**
-     * Marcador do modelo REA: ícone das mãos ao lado do local.
+     * Marcador do modelo REA: ícone das mãos na célula colada à direita do local.
      */
     public static function librasMarkerHtml(): string
     {
@@ -82,12 +82,13 @@ class BaptismListDocumentBlocks
 
         $path = self::librasIconPath();
         if (! is_file($path)) {
-            return $html = ' <em>(Libras)</em>';
+            return $html = '<em>L</em>';
         }
 
         $uri = 'data:image/png;base64,'.base64_encode((string) file_get_contents($path));
+        $size = BaptismListDocumentLayout::LIBRAS_ICON_PT;
 
-        return $html = ' <img src="'.$uri.'" alt="Libras" width="12" height="12" style="width: 11pt; height: 11pt; vertical-align: middle;">';
+        return $html = '<img src="'.$uri.'" alt="Libras" style="width: '.$size.'pt; height: '.$size.'pt; vertical-align: middle;">';
     }
 
     /**
@@ -341,11 +342,10 @@ class BaptismListDocumentBlocks
                 .'<td class="date">'.e($date).'</td>'
                 .'<td class="day">'.e($weekday).'</td>'
                 .'<td class="time">'.e($time).'</td>'
-                .'<td class="'.$locClass.'">'.BaptismListReportBuilder::pdfLocationHtml($location)
-                .(! $wide && $libras ? self::librasMarkerHtml() : '')
-                .'</td>';
+                .'<td class="'.$locClass.'">'.BaptismListReportBuilder::pdfLocationHtml($location).'</td>';
             if (! $wide) {
-                $html .= '<td class="att">'.e($attendant).'</td>';
+                $html .= '<td class="lib">'.($libras ? self::librasMarkerHtml() : '').'</td>'
+                    .'<td class="att">'.e($attendant).'</td>';
             }
             $html .= '</tr>';
             $rows[] = [

@@ -42,6 +42,15 @@ return [
         'driver' => env('HOLIDAY_SYNC_DRIVER', 'brasilapi'),
     ],
 
+    /*
+    | PDF da Lista de Batismos convertido a partir do Word pelo LibreOffice (soffice headless).
+    | Sem binário configurado, ou se a conversão falhar, o PDF sai pelo DomPDF.
+    */
+    'baptism_pdf' => [
+        'soffice' => env('NEXUS_SOFFICE_BIN'),
+        'timeout' => (int) env('NEXUS_SOFFICE_TIMEOUT', 90),
+    ],
+
     'pagination' => [
         'default' => 20,
         'per_page_options' => [10, 15, 20, 25, 50, 100],

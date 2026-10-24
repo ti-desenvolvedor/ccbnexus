@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Livewire\Agenda\EventList;
 use App\Models\Event;
+use App\Models\EventType;
 use App\Models\Regional;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -72,6 +73,9 @@ class AgendaViewsTest extends TestCase
             ->assertSee('Serie pai')
             ->assertSee('Séries da regional, não o mês.')
             ->set('view', 'agenda')
+            ->assertDontSee('Gerar PDF')
+            ->assertSee('Serie pai')
+            ->set('listMode', 'occurrences')
             ->assertSee('Gerar PDF')
             ->assertSeeHtml('layout=agenda');
 
@@ -124,5 +128,75 @@ class AgendaViewsTest extends TestCase
             ->assertSee('Pendente')
             ->set('view', 'week')
             ->assertSee('· Pendente');
+    }
+
+    public function test_series_and_type_filters_stay_available_in_every_view(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $regional = Regional::query()->create([
+            'name' => 'Regional A',
+            'slug' => 'regional-a',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->create([
+            'regional_id' => $regional->id,
+            'is_super_admin' => true,
+        ]);
+        $baptism = EventType::query()->create([
+            'name' => 'Batismo',
+            'slug' => 'batismo',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+        $youth = EventType::query()->create([
+            'name' => 'Mocidade',
+            'slug' => 'mocidade',
+            'is_active' => true,
+            'sort_order' => 2,
+        ]);
+        Event::query()->create([
+            'regional_id' => $regional->id,
+            'title' => 'Serie de batismo',
+            'event_type_id' => $baptism->id,
+            'starts_at' => '2026-10-04 18:30:00',
+            'ends_at' => '2026-10-04 20:30:00',
+            'status' => 'published',
+            'is_occurrence' => false,
+            'created_by' => $user->id,
+        ]);
+        Event::query()->create([
+            'regional_id' => $regional->id,
+            'title' => 'Serie da mocidade',
+            'event_type_id' => $youth->id,
+            'starts_at' => '2026-10-11 14:00:00',
+            'ends_at' => '2026-10-11 16:00:00',
+            'status' => 'published',
+            'is_occurrence' => false,
+            'created_by' => $user->id,
+        ]);
+        session(['nexus.active_regional_id' => $regional->id]);
+
+        $component = Livewire::actingAs($user)
+            ->test(EventList::class)
+            ->set('view', 'month')
+            ->assertSee('Ocorrências')
+            ->assertSee('Séries')
+            ->assertSee('Tipo')
+            ->set('listMode', 'series')
+            ->set('typeFilter', (string) $baptism->id)
+            ->assertSee('Serie de batismo')
+            ->assertDontSee('Serie da mocidade')
+            ->set('view', 'week')
+            ->assertSee('Serie de batismo')
+            ->assertDontSee('Serie da mocidade')
+            ->assertDontSee('Anterior')
+            ->set('view', 'agenda')
+            ->assertSee('Serie de batismo')
+            ->set('listMode', 'occurrences')
+            ->set('typeFilter', '0')
+            ->set('cursor', '2026-10-11')
+            ->assertSee('Anterior');
+
+        $this->assertSame('agenda', $component->get('view'));
     }
 }

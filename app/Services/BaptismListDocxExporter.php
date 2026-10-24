@@ -267,7 +267,7 @@ class BaptismListDocxExporter
             return;
         }
 
-        $ratios = $wide ? [0.16, 0.13, 0.17, 0.54] : [0.16, 0.13, 0.17, 0.32, 0.22];
+        $ratios = array_values($wide ? BaptismListDocumentLayout::WIDE_COLUMNS : BaptismListDocumentLayout::LIST_COLUMNS);
         $widths = $this->splitWidth($this->columnWidth, $ratios);
         $table = $section->addTable([
             'layout' => Table::LAYOUT_FIXED,
@@ -282,9 +282,10 @@ class BaptismListDocxExporter
             $this->addPlainCell($table, $widths[0], (string) ($row['date'] ?? ''), $alt, 'center');
             $this->addPlainCell($table, $widths[1], (string) ($row['weekday'] ?? ''), $alt, 'center');
             $this->addPlainCell($table, $widths[2], (string) ($row['time'] ?? ''), $alt, 'center');
-            $this->addLocationCell($table, $widths[3], $row, $alt);
+            $this->addLocationCell($table, $widths[3], $row, $alt, ! $wide);
             if (! $wide) {
-                $this->addPlainCell($table, $widths[4], (string) ($row['attendant'] ?? ''), $alt, 'center');
+                $this->addLibrasCell($table, $widths[4], ! empty($row['libras']), $alt);
+                $this->addPlainCell($table, $widths[5], (string) ($row['attendant'] ?? ''), $alt, 'center');
             }
         }
     }
@@ -324,9 +325,9 @@ class BaptismListDocxExporter
      * @param  \PhpOffice\PhpWord\Element\Table  $table
      * @param  array<string, mixed>  $row
      */
-    private function addLocationCell($table, int $width, array $row, bool $alt): void
+    private function addLocationCell($table, int $width, array $row, bool $alt, bool $joinedRight): void
     {
-        $cell = $table->addCell($width, $this->cellStyle($alt));
+        $cell = $table->addCell($width, $this->cellStyle($alt, $joinedRight ? 'right' : null));
         $run = $cell->addTextRun($this->paragraph());
         $lines = BaptismListReportBuilder::locationLines((string) ($row['location'] ?? ''));
         if ($lines === []) {
@@ -338,21 +339,31 @@ class BaptismListDocxExporter
             }
             $run->addText(str_replace('-', "\u{2011}", $line), $this->font(BaptismListDocumentLayout::BODY_PT));
         }
-        if (empty($row['libras']) || ! empty($row['wide'])) {
-            return;
-        }
+    }
 
+    /**
+     * @param  \PhpOffice\PhpWord\Element\Table  $table
+     */
+    private function addLibrasCell($table, int $width, bool $libras, bool $alt): void
+    {
+        $cell = $table->addCell($width, $this->cellStyle($alt, 'left'));
+        $run = $cell->addTextRun($this->paragraph(['alignment' => 'right']));
         $icon = BaptismListDocumentBlocks::librasIconPath();
+        if (! $libras) {
+            $run->addText('', $this->font());
+
+            return;
+        }
         if (! is_file($icon)) {
-            $run->addText(' (Libras)', $this->font(BaptismListDocumentLayout::BODY_PT, false, null, true));
+            $run->addText('L', $this->font(BaptismListDocumentLayout::BODY_PT, false, null, true));
 
             return;
         }
 
-        $run->addText(' ', $this->font());
+        $size = BaptismListDocumentLayout::LIBRAS_ICON_PT;
         $run->addImage($icon, [
-            'width' => 14,
-            'height' => 14,
+            'width' => $size,
+            'height' => $size,
             'wrappingStyle' => 'inline',
         ]);
     }
@@ -360,13 +371,18 @@ class BaptismListDocxExporter
     /**
      * @return array<string, mixed>
      */
-    private function cellStyle(bool $alt): array
+    private function cellStyle(bool $alt, ?string $openSide = null): array
     {
         $style = [
             'borderSize' => 4,
             'borderColor' => '000000',
             'valign' => 'center',
         ];
+        if ($openSide === 'right') {
+            $style['borderRightStyle'] = 'nil';
+        } elseif ($openSide === 'left') {
+            $style['borderLeftStyle'] = 'nil';
+        }
         if ($alt) {
             $style['bgColor'] = 'D9D9D9';
         }

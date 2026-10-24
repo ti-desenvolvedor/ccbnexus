@@ -26,7 +26,7 @@ Ordem vertical, de cima para baixo:
 1. **Contexto da leitura** — uma linha: «Contexto: {nome da regional}». Se `regionalId` é nulo: faixa âmbar «Selecione uma regional no topo para gerar o PDF. Esta tela mostra todas as regionais a que tem acesso.» Se `includesDrafts`: texto curto «Inclui rascunhos» ao lado do contexto.
 2. **Vistas** — `role="tablist"`, quatro separadores com texto (não só ícone), `aria-selected`, alvo mínimo 44px: **Calendário**, **Lista**, **Mensal**, **Agenda**.
 3. **Submodo da lista** — só em Lista: dois botões **Ocorrências** e **Séries**. Séries é a tabela operacional atual (`mode=series`). Ocorrências é a cronologia do mês (`mode=occurrences`, `window=month`).
-4. **Tempo** — «Anterior», «Hoje», «Seguinte» e o rótulo no centro. Calendário: semana («12–18 out 2026»), semana ISO de segunda a domingo. Mensal, Agenda e Lista/Ocorrências: «outubro 2026». Em Lista/Séries o bloco de tempo **não aparece** (a janela é ignorada pelo contrato).
+4. **Tempo** — «Anterior», «Hoje», «Seguinte» e o rótulo no centro. Calendário: semana («12–18 out 2026»), semana ISO de segunda a domingo. Mensal, Agenda e Lista em Ocorrências: «outubro 2026». Em Séries, em qualquer vista, o bloco de tempo **não aparece** (a janela é ignorada pelo contrato).
 5. **Filtros** — pesquisa; tipo, situação e canal em `x-nexus.searchable-select` (mostra as primeiras opções e filtra ao digitar). Empilham em coluna até `lg`.
 6. **PDF** — botão secundário «Gerar PDF», só em Mensal e Agenda. Nas outras vistas não fica desativado à mostra: simplesmente não está lá.
 7. **Corpo** da vista activa.

@@ -197,7 +197,7 @@ class EventList extends Component
         );
         $result = $this->read($query, $user);
 
-        $showPeriod = ! ($this->view === 'list' && $this->listMode === 'series');
+        $showPeriod = $this->listMode !== 'series';
         $regional = $result->regionalId
             ? Regional::query()->find($result->regionalId, ['id', 'name', 'slug'])
             : null;
@@ -234,7 +234,7 @@ class EventList extends Component
             ], fn ($value) => $value !== null && $value !== ''))
             : null;
 
-        $showHolidays = $this->view !== 'list';
+        $showHolidays = $this->view !== 'list' && $this->listMode !== 'series';
         $holidaysByDate = $showHolidays
             ? app(AgendaHolidayMarkers::class)->forRange($result->rangeStart, $result->rangeEnd, $result->regionalId)
             : [];
@@ -285,7 +285,7 @@ class EventList extends Component
             ? $this->statusFilter
             : '';
 
-        if ($this->view === 'list' && $this->listMode === 'series') {
+        if ($this->listMode === 'series') {
             return new AgendaReadCriteria(
                 mode: AgendaReadCriteria::MODE_SERIES,
                 search: $this->search,
